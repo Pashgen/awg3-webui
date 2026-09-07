@@ -6,7 +6,7 @@
 # =============================================================================
 
 # ── Stage 1: build amneziawg-go ──────────────────────────────────────────────
-FROM golang:1.24.4-alpine3.21 AS build-awg-go
+FROM golang:1.25.5-alpine3.21 AS build-awg-go
 
 RUN apk add --no-cache git
 
