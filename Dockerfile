@@ -44,7 +44,7 @@ RUN apk add --no-cache git build-base bash linux-headers
 
 WORKDIR /build
 RUN git clone --depth=1 \
-    --branch v1.0.20260223 \
+    --branch v3.1.20260812 \
     https://github.com/amnezia-vpn/amneziawg-tools.git . && \
     cd src && \
     make WITH_WGQUICK=yes && \
