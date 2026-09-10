@@ -25,7 +25,7 @@ from flask import Flask, request, jsonify, render_template, Response, abort, ses
 
 import sys
 sys.path.insert(0, os.path.dirname(__file__))
-from cps_generator import gen_cfg, default_input, MIMIC_PROFILES, BROWSER_PROFILES, PROFILE_LABELS
+from cps_generator import gen_cfg, gen_awg31_extra, default_input, MIMIC_PROFILES, BROWSER_PROFILES, PROFILE_LABELS
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Config
@@ -197,6 +197,29 @@ def _gen_keypair():
 
 def _gen_psk():
     return base64.b64encode(os.urandom(32)).decode()
+
+
+def _b64_key_to_hex(b64_key: str) -> str:
+    """Convert a base64-encoded 32-byte key (.conf format) to hex (UAPI format)."""
+    return base64.b64decode(b64_key).hex()
+
+
+_AWG31_REQUEST_KEYS = (
+    "enable_awg31", "random_trailers", "disable_cookies",
+    "content_padding_addition", "rekey_after_time", "rekey_timeout",
+    "reject_after_time", "keepalive_timeout", "max_handshake_attempts",
+)
+
+
+def _awg31_input_from_request(data: dict) -> dict:
+    """Extract AWG 3.1 extra fields from a request JSON body into gen_awg31_extra() input shape."""
+    out = {"enable_awg31": bool(data.get("enable_awg31", False))}
+    out["random_trailers"] = bool(data.get("random_trailers", False))
+    out["disable_cookies"] = bool(data.get("disable_cookies", False))
+    for k in ("content_padding_addition", "rekey_after_time", "rekey_timeout",
+              "reject_after_time", "keepalive_timeout", "max_handshake_attempts"):
+        out[k] = str(data.get(k, "") or "").strip()
+    return out
 
 
 def _derive_pubkey(priv_b64: str) -> str:
@@ -774,6 +797,20 @@ def _build_client_conf(peer_priv: str, peer_pub: str, server_pub: str,
             if awg_params.get(tag):
                 lines.append(f"{tag} = {awg_params[tag]}")
 
+    # AWG 3.1 extras — mirrored VERBATIM from the server (HeaderProtectionKey is a
+    # symmetric key shared between both ends; RandomTrailers/DisableCookies/timing
+    # ranges must match the server's behavior, same reasoning as H1-H4/S1-S4/Jc above).
+    if awg_params.get("HeaderProtectionKey"):
+        lines.append(f"HeaderProtectionKey = {awg_params['HeaderProtectionKey']}")
+    if "RandomTrailers" in awg_params:
+        lines.append(f"RandomTrailers = {'on' if awg_params['RandomTrailers'] else 'off'}")
+    if "DisableCookies" in awg_params:
+        lines.append(f"DisableCookies = {'on' if awg_params['DisableCookies'] else 'off'}")
+    for tag in ("ContentPaddingAddition", "RekeyAfterTime", "RekeyTimeout",
+                "RejectAfterTime", "KeepaliveTimeout", "MaxHandshakeAttempts"):
+        if awg_params.get(tag):
+            lines.append(f"{tag} = {awg_params[tag]}")
+
     lines += ["", "[Peer]", f"PublicKey = {server_pub}"]
     if psk:
         lines.append(f"PresharedKey = {psk}")
@@ -1350,7 +1387,18 @@ def server_status():
         "S1": iface.get("S1", ""), "S2": iface.get("S2", ""),
         "S3": iface.get("S3", ""), "S4": iface.get("S4", ""),
         "I1": iface.get("I1", ""), "I2": iface.get("I2", ""),
+        # AWG 3.1 extras (empty string = not configured)
+        "HeaderProtectionKey":   "set" if iface.get("HeaderProtectionKey") else "",
+        "RandomTrailers":        iface.get("RandomTrailers", ""),
+        "DisableCookies":        iface.get("DisableCookies", ""),
+        "ContentPaddingAddition": iface.get("ContentPaddingAddition", ""),
+        "RekeyAfterTime":        iface.get("RekeyAfterTime", ""),
+        "RekeyTimeout":          iface.get("RekeyTimeout", ""),
+        "RejectAfterTime":       iface.get("RejectAfterTime", ""),
+        "KeepaliveTimeout":      iface.get("KeepaliveTimeout", ""),
+        "MaxHandshakeAttempts":  iface.get("MaxHandshakeAttempts", ""),
     }
+    awg31_enabled = bool(iface.get("HeaderProtectionKey"))
     cps_profile = _detect_cps_profile(iface.get("I1", ""))
 
     # Alerts
@@ -1388,6 +1436,7 @@ def server_status():
         # Config
         "conf_params":   conf_params,
         "cps_profile":   cps_profile,
+        "awg31_enabled": awg31_enabled,
         # Alerts
         "alerts":        alerts,
     })
@@ -1466,6 +1515,31 @@ def init_server():
         for tag in ("I1","I2","I3","I4","I5"):
             if awg_params.get(tag):
                 lines.append(f"{tag} = {awg_params[tag]}")
+
+    # AWG 3.1 extras (opt-in — see project handoff "СЛЕДУЮЩИЙ ШАГ" for the plan
+    # this implements). Off by default: existing 2.0-only servers/peers are
+    # untouched unless the caller explicitly passes enable_awg31=true.
+    awg31_inp = _awg31_input_from_request(data)
+    if awg31_inp["enable_awg31"]:
+        try:
+            awg31_extra = gen_awg31_extra(awg31_inp)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        # Reuse the existing HeaderProtectionKey on re-init (unless the caller asks
+        # to regenerate it) — same reasoning as PrivateKey above: don't silently
+        # rotate a key that's already baked into existing peers' client confs.
+        existing_hpk = iface.get("HeaderProtectionKey", "")
+        if existing_hpk and not data.get("regenerate_header_key"):
+            header_key = existing_hpk
+        else:
+            header_key = _gen_psk()  # 32 random bytes, base64 — same shape as a PSK
+        lines.append(f"HeaderProtectionKey = {header_key}")
+        lines.append(f"RandomTrailers = {'on' if awg31_extra['RandomTrailers'] else 'off'}")
+        lines.append(f"DisableCookies = {'on' if awg31_extra['DisableCookies'] else 'off'}")
+        for tag in ("ContentPaddingAddition", "RekeyAfterTime", "RekeyTimeout",
+                    "RejectAfterTime", "KeepaliveTimeout", "MaxHandshakeAttempts"):
+            if tag in awg31_extra:
+                lines.append(f"{tag} = {awg31_extra[tag]}")
 
     lines += [f"PostUp = {post_up}", f"PreDown = {post_down}"]
 
@@ -1676,6 +1750,20 @@ def add_peer():
         srv_val = srv_iface.get(key, "").strip()
         if srv_val:
             awg_params[key] = int(srv_val)
+
+    # AWG 3.1 extras: mirror server's values into the client conf verbatim (if the
+    # server has them configured — see /api/server/awg31). Independent per-peer
+    # generation would break the protocol here (HeaderProtectionKey especially is
+    # a shared symmetric key, not something each peer can pick on its own).
+    if srv_iface.get("HeaderProtectionKey"):
+        awg_params["HeaderProtectionKey"] = srv_iface["HeaderProtectionKey"]
+        awg_params["RandomTrailers"] = srv_iface.get("RandomTrailers", "off").strip().lower() in ("on", "1", "true")
+        awg_params["DisableCookies"] = srv_iface.get("DisableCookies", "off").strip().lower() in ("on", "1", "true")
+        for tag in ("ContentPaddingAddition", "RekeyAfterTime", "RekeyTimeout",
+                    "RejectAfterTime", "KeepaliveTimeout", "MaxHandshakeAttempts"):
+            srv_val = srv_iface.get(tag, "").strip()
+            if srv_val:
+                awg_params[tag] = srv_val
 
     # I1-I5: independently generated per peer (client-side CPS)
     client_conf = _build_client_conf(peer_priv, peer_pub, server_pub, psk, peer_ip, awg_params)
@@ -2026,6 +2114,118 @@ def regen_cps():
     })
 
 
+@app.route("/api/server/awg31", methods=["POST"])
+@require_auth
+def server_awg31():
+    """Enable/update or disable the AWG 3.1 extras (HeaderProtectionKey,
+    RandomTrailers, DisableCookies, ContentPaddingAddition, Rekey*/Keepalive*/
+    MaxHandshakeAttempts) on the server's [Interface] WITHOUT touching
+    PrivateKey/H1-H4/S1-S4/Jc/Jmin/Jmax/I1-I5 or existing peers — unlike
+    /api/server/init, which regenerates the whole CPS profile.
+
+    Existing peers are NOT retroactively updated (their stored #ClientConf
+    already has the OLD HeaderProtectionKey baked in, if any) — new peers
+    created after this call will pick up the current values (see add_peer()).
+    Re-downloading/re-issuing existing peers' configs after enabling is the
+    caller's job if they need every device on the new key.
+    """
+    data = request.get_json() or {}
+    conf = _read_conf()
+    iface = _parse_server_section(conf)
+    if not iface.get("PrivateKey"):
+        return jsonify({"error": "Server not initialized. Run Server Setup first."}), 400
+
+    enable = bool(data.get("enable_awg31", False))
+    logs = []
+
+    _AWG31_KEYS = ("HeaderProtectionKey", "RandomTrailers", "DisableCookies",
+                   "ContentPaddingAddition", "RekeyAfterTime", "RekeyTimeout",
+                   "RejectAfterTime", "KeepaliveTimeout", "MaxHandshakeAttempts")
+
+    new_values = {}
+    if enable:
+        awg31_inp = _awg31_input_from_request(data)
+        awg31_inp["enable_awg31"] = True
+        try:
+            awg31_extra = gen_awg31_extra(awg31_inp)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+
+        existing_hpk = iface.get("HeaderProtectionKey", "")
+        if existing_hpk and not data.get("regenerate_header_key"):
+            header_key = existing_hpk
+        else:
+            header_key = _gen_psk()
+        new_values["HeaderProtectionKey"] = header_key
+        new_values["RandomTrailers"] = "on" if awg31_extra["RandomTrailers"] else "off"
+        new_values["DisableCookies"] = "on" if awg31_extra["DisableCookies"] else "off"
+        for tag in ("ContentPaddingAddition", "RekeyAfterTime", "RekeyTimeout",
+                    "RejectAfterTime", "KeepaliveTimeout", "MaxHandshakeAttempts"):
+            if tag in awg31_extra:
+                new_values[tag] = awg31_extra[tag]
+
+    # ── Rewrite persisted conf: replace/insert enabled keys, strip removed ones ──
+    updated = conf
+    for tag in _AWG31_KEYS:
+        if tag in new_values:
+            val = new_values[tag]
+            if re.search(rf'^{tag}\s*=', updated, re.MULTILINE):
+                updated = re.sub(rf'^{tag}\s*=.*$', f'{tag} = {val}', updated, flags=re.MULTILINE)
+            elif '[Peer]' in updated:
+                updated = updated.replace('[Peer]', f'{tag} = {val}\n[Peer]', 1)
+            else:
+                updated = updated.rstrip() + f'\n{tag} = {val}\n'
+        else:
+            # not enabled / not provided this time → remove if present
+            updated = re.sub(rf'^{tag}\s*=.*\n?', '', updated, flags=re.MULTILINE)
+    _write_conf(_rebuild_conf(updated, _parse_peers(updated)))
+
+    # ── Hot-apply via UAPI (best-effort — matches regen_cps()'s I1-I5 mechanism) ──
+    hot_applied = False
+    if new_values:
+        try:
+            import socket
+            uapi_lines = []
+            for tag, val in new_values.items():
+                if tag == "HeaderProtectionKey":
+                    uapi_lines.append(f"header_protection_key={_b64_key_to_hex(val)}")
+                else:
+                    uapi_key = re.sub(r'(?<!^)(?=[A-Z])', '_', tag).lower()
+                    uapi_lines.append(f"{uapi_key}={val}")
+            sock_path = f"/var/run/amneziawg/{AWG_IF}.sock"
+            if os.path.exists(sock_path) and uapi_lines:
+                s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                s.settimeout(3.0)
+                s.connect(sock_path)
+                msg = "set=1\n" + "\n".join(uapi_lines) + "\n\n"
+                s.sendall(msg.encode())
+                resp = b""
+                while True:
+                    chunk = s.recv(4096)
+                    if not chunk:
+                        break
+                    resp += chunk
+                    if b"\n\n" in resp:
+                        break
+                s.close()
+                resp_text = resp.decode(errors="replace").strip()
+                logs.append(resp_text)
+                hot_applied = "errno=0" in resp_text or resp_text == ""
+        except Exception as e:
+            logs.append(f"UAPI error: {e}")
+    elif not enable:
+        logs.append("Disabled in saved config — a full AWG restart "
+                     "(Apply Config) is needed to clear it from the running daemon.")
+
+    return jsonify({
+        "ok": True,
+        "enabled": enable,
+        "values": new_values,
+        "hot_applied": hot_applied,
+        "logs": logs,
+    })
+
+
 # ── Settings ─────────────────────────────────────────────────────────────────
 
 @app.route("/api/ssl/configure", methods=["POST"])
@@ -2329,7 +2529,7 @@ def export_config():
         })
     return jsonify({
         "exported_at": datetime.utcnow().isoformat() + "Z",
-        "awg_version": "2.0",
+        "awg_version": "3.1" if iface.get("HeaderProtectionKey") else "2.0",
         "server": {
             "interface": AWG_IF,
             "address": iface.get("Address", ""),

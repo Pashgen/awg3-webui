@@ -2,16 +2,16 @@
 
 <div align="center">
 
-![AmneziaWG](https://img.shields.io/badge/AmneziaWG-2.0-7C3AED?style=for-the-badge&logo=wireguard)
+![AmneziaWG](https://img.shields.io/badge/AmneziaWG-2.0%2F3.1-7C3AED?style=for-the-badge&logo=wireguard)
 ![Docker](https://img.shields.io/badge/Docker-Multi--arch-2496ED?style=for-the-badge&logo=docker)
 ![Proxmox](https://img.shields.io/badge/Proxmox-LXC-E57000?style=for-the-badge&logo=proxmox)
 [![Build](https://img.shields.io/github/actions/workflow/status/Pashgen/awg2-webui/build.yml?style=for-the-badge&logo=github-actions&label=CI)](https://github.com/Pashgen/awg2-webui/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/Pashgen/awg2-webui?style=for-the-badge&logo=github)](https://github.com/Pashgen/awg2-webui/releases)
 ![License](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)
 
-**Web management panel for AmneziaWG 2.0 VPN server — built entirely from source**
+**Web management panel for AmneziaWG 2.0 / 3.1 VPN server — built entirely from source**
 
-[Quick Start](#-quick-start) • [Features](#-features) • [Proxmox LXC](#-proxmox-lxc) • [MikroTik CHR](#-mikrotik-chr) • [Screenshots](#-screenshots) • [Troubleshooting](#-troubleshooting)
+[Quick Start](#-quick-start) • [Features](#-features) • [AWG 3.1](#-amneziawg-31-support) • [Proxmox LXC](#-proxmox-lxc) • [MikroTik CHR](#-mikrotik-chr) • [Screenshots](#-screenshots) • [Troubleshooting](#-troubleshooting)
 
 </div>
 
@@ -19,7 +19,7 @@
 
 ## 📋 Overview
 
-A self-hosted web UI for managing [AmneziaWG 2.0](https://github.com/amnezia-vpn/amneziawg-go) — the obfuscated WireGuard fork that bypasses DPI censorship. Built from source with no pre-built binaries, runs anywhere Docker runs.
+A self-hosted web UI for managing [AmneziaWG 2.0](https://github.com/amnezia-vpn/amneziawg-go) — the obfuscated WireGuard fork that bypasses DPI censorship. Built from source with no pre-built binaries, runs anywhere Docker runs. As of `v1.1.0` it also supports the newer AmneziaWG 3.1 protocol extras as an opt-in — see [AmneziaWG 3.1 Support](#-amneziawg-31-support).
 
 ### Why This Solution?
 
@@ -41,6 +41,51 @@ A self-hosted web UI for managing [AmneziaWG 2.0](https://github.com/amnezia-vpn
 - 🔔 **Alerts** — AWG daemon down, peer no handshake > 2h
 - 🌐 **i18n** — English / Russian
 - 📦 **Prometheus** — `/metrics` endpoint for Grafana integration
+- 🆕 **AmneziaWG 3.1 (opt-in)** — HeaderProtectionKey, RandomTrailers, DisableCookies, configurable timing/padding ranges — fully backward-compatible with 2.0
+
+---
+
+## 🆕 AmneziaWG 3.1 Support
+
+`v1.1.0` adds full, **opt-in** support for the newer AmneziaWG 3.1 protocol extras, on top
+of the existing 2.0 obfuscation (H1–H4 / S1–S4 / Jc·Jmin·Jmax / I1–I5). AWG 3.1 is **off by
+default** — existing 2.0 servers and peers are completely unaffected until you turn it on.
+
+**What's new:**
+
+- 🔑 **HeaderProtectionKey** — a 32-byte symmetric key shared by the server and every peer
+  that encrypts each packet's header. Generated automatically the first time you enable
+  AWG 3.1, shown in the UI, and can be manually regenerated (existing peers keep the old
+  key baked into their config until you re-issue it — see below).
+- 🎲 **RandomTrailers** — **off by default**. There's a known, unresolved upstream bug
+  ([amnezia-vpn/amneziawg-go#186](https://github.com/amnezia-vpn/amneziawg-go/issues/186)):
+  combined with wide H1–H3 ranges, it can silently drop transport packets (up to ~25% in
+  the reported case, with nothing showing up in the logs). The Web UI warns about this
+  when you turn it on.
+- 🍪 **DisableCookies** — simple on/off toggle.
+- ⏱️ **Timing & padding ranges** — `ContentPaddingAddition`, `RekeyAfterTime`,
+  `RekeyTimeout`, `RejectAfterTime`, `KeepaliveTimeout`, `MaxHandshakeAttempts`. Each
+  accepts either a single value (`"120"`) or a range (`"100-140"`) — seconds, except
+  `ContentPaddingAddition` which is bytes. Leave any of them empty to fall back to
+  amneziawg-go's own built-in defaults instead of guessing a value.
+
+**How it works:**
+
+- Toggling AWG 3.1 is a separate action from Server Setup (`POST /api/server/awg31`) — it
+  does **not** touch your existing PrivateKey, H1–H4/S1–S4/Jc, or peer list.
+- New peers automatically inherit the server's current 3.1 settings — the header-protection
+  key is shared secret material, not something each peer can generate on its own.
+- Enabling/disabling/regenerating attempts a best-effort hot-apply over the AmneziaWG UAPI
+  socket; if the daemon isn't reachable, changes are still persisted to the config file and
+  take effect on the next full config apply/restart.
+- **Existing peers are not retroactively updated** — if you enable AWG 3.1 (or regenerate
+  the key) after peers already exist, re-download/re-issue their configs so every device
+  ends up on the same `HeaderProtectionKey`.
+- `awg_version` in `/api/config/export` reports `3.1` once a `HeaderProtectionKey` is set on
+  the server, `2.0` otherwise.
+- Requires the toolchain already shipped since `v1.0.3` — `amneziawg-tools ≥ v3.1.20260812`
+  and an `amneziawg-go` build with 3.1 support — no Dockerfile changes needed for this
+  release.
 
 ---
 

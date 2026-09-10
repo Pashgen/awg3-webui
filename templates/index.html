@@ -929,6 +929,71 @@ tr.peer-suspended{opacity:.6;}
           <div class="param-grid" id="sv-params-grid"></div>
         </div>
       </div>
+
+    <div class="card">
+      <div class="card-title">🛡️ <span data-i18n="awg31_title">AmneziaWG 3.1 Extras</span></div>
+      <div class="toggle-row">
+        <label class="toggle"><input type="checkbox" id="awg31-enabled" onchange="toggleAwg31Fields()"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_awg31_enabled">Enable AWG 3.1</span></label>
+      </div>
+      <div id="awg31-fields" style="display:none">
+        <div class="form-row">
+          <div class="form-group full">
+            <label data-i18n="label_awg31_hpk">Header Protection Key
+              <span class="help-tip" data-tooltip="Symmetric key shared by server and every peer to encrypt/decrypt packet headers. Regenerating breaks all existing peer configs until re-issued." data-i18n-tooltip="tip_awg31_hpk">?</span>
+            </label>
+            <div class="code-block" id="awg31-hpk-block"><button class="copy-btn" onclick="copyCode('awg31-hpk-block')">Copy</button><span id="awg31-hpk-text">—</span></div>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <label class="toggle"><input type="checkbox" id="awg31-random-trailers" onchange="document.getElementById('awg31-rt-warning').style.display=this.checked?'block':'none'"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_awg31_random_trailers">Random Trailers</span></label>
+          <label class="toggle"><input type="checkbox" id="awg31-disable-cookies"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_awg31_disable_cookies">Disable Cookies</span></label>
+          <label class="toggle"><input type="checkbox" id="awg31-regen-hpk"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_awg31_regen_hpk">Regenerate Key</span></label>
+        </div>
+        <div id="awg31-rt-warning" class="alert alert-warn" style="display:none" data-i18n="warn_awg31_random_trailers">⚠ Known upstream bug (amneziawg-go issue #186): Random Trailers combined with wide H1-H3 ranges can silently drop transport packets. Keep H1-H3 ranges narrow if you enable this.</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="label_awg31_padding">Content Padding Addition
+              <span class="help-tip" data-tooltip="Bytes. &quot;N&quot; or &quot;min-max&quot;. Leave empty to disable." data-i18n-tooltip="tip_awg31_padding">?</span>
+            </label>
+            <input id="awg31-padding" type="text" placeholder="e.g. 0-128">
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_awg31_rekey_after">Rekey After Time
+              <span class="help-tip" data-tooltip="Seconds. &quot;N&quot; or &quot;min-max&quot;. Daemon default: 120." data-i18n-tooltip="tip_awg31_rekey_after">?</span>
+            </label>
+            <input id="awg31-rekey-after" type="text" placeholder="120">
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_awg31_rekey_timeout">Rekey Timeout
+              <span class="help-tip" data-tooltip="Seconds. &quot;N&quot; or &quot;min-max&quot;. Daemon default: 5." data-i18n-tooltip="tip_awg31_rekey_timeout">?</span>
+            </label>
+            <input id="awg31-rekey-timeout" type="text" placeholder="5">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="label_awg31_reject_after">Reject After Time
+              <span class="help-tip" data-tooltip="Seconds. &quot;N&quot; or &quot;min-max&quot;. Daemon default: 180." data-i18n-tooltip="tip_awg31_reject_after">?</span>
+            </label>
+            <input id="awg31-reject-after" type="text" placeholder="180">
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_awg31_keepalive">Keepalive Timeout
+              <span class="help-tip" data-tooltip="Seconds. &quot;N&quot; or &quot;min-max&quot;. Daemon default: 10." data-i18n-tooltip="tip_awg31_keepalive">?</span>
+            </label>
+            <input id="awg31-keepalive" type="text" placeholder="10">
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_awg31_max_handshake">Max Handshake Attempts
+              <span class="help-tip" data-tooltip="&quot;N&quot; or &quot;min-max&quot;. Daemon default: 18." data-i18n-tooltip="tip_awg31_max_handshake">?</span>
+            </label>
+            <input id="awg31-max-handshake" type="text" placeholder="18">
+          </div>
+        </div>
+      </div>
+      <div class="btn-group"><button class="btn btn-primary" onclick="saveAwg31()" data-i18n="btn_save_awg31">💾 Save AWG 3.1 Settings</button></div>
+      <div id="awg31-status" style="font-size:11px;color:var(--muted);margin-top:8px"></div>
+    </div>
     </div>
 
     <!-- CPS GENERATOR -->
@@ -1526,6 +1591,27 @@ const I18N={
     ssl_how_body:'Передай env при запуске контейнера:<br><code style="color:var(--accent)">-e SSL_DOMAIN=vpn.example.com</code><br><code style="color:var(--accent)">-e SSL_EMAIL=admin@example.com</code><br>Порт 80 должен быть открыт для ACME-challenge. Сертификат обновляется автоматически каждый вторник в 03:00.',
     ssl_status_active:'✅ SSL активен', ssl_status_inactive:'⚠️ SSL не настроен',
     ssl_domain_label:'Домен:', ssl_expiry_label:'Истекает:',
+    awg31_title:'Расширения AmneziaWG 3.1',
+    toggle_awg31_enabled:'Включить AWG 3.1',
+    label_awg31_hpk:'Ключ защиты заголовков (HeaderProtectionKey)',
+    tip_awg31_hpk:'Симметричный ключ, общий для сервера и всех пиров, шифрует заголовок каждого пакета. Перегенерация сломает конфиги уже выданных пиров, пока их не переиздать.',
+    toggle_awg31_random_trailers:'Случайные трейлеры (RandomTrailers)',
+    toggle_awg31_disable_cookies:'Отключить cookies (DisableCookies)',
+    toggle_awg31_regen_hpk:'Перегенерировать ключ',
+    warn_awg31_random_trailers:'⚠ Известный баг апстрима (amneziawg-go issue #186): RandomTrailers вместе с широкими диапазонами H1-H3 может незаметно ронять транспортные пакеты. При включении держите диапазоны H1-H3 узкими.',
+    label_awg31_padding:'Доп. паддинг контента (ContentPaddingAddition)',
+    tip_awg31_padding:'Байты. "N" или "min-max". Пусто — отключено.',
+    label_awg31_rekey_after:'Rekey After Time',
+    tip_awg31_rekey_after:'Секунды. "N" или "min-max". По умолчанию у демона: 120.',
+    label_awg31_rekey_timeout:'Rekey Timeout',
+    tip_awg31_rekey_timeout:'Секунды. "N" или "min-max". По умолчанию у демона: 5.',
+    label_awg31_reject_after:'Reject After Time',
+    tip_awg31_reject_after:'Секунды. "N" или "min-max". По умолчанию у демона: 180.',
+    label_awg31_keepalive:'Keepalive Timeout',
+    tip_awg31_keepalive:'Секунды. "N" или "min-max". По умолчанию у демона: 10.',
+    label_awg31_max_handshake:'Max Handshake Attempts',
+    tip_awg31_max_handshake:'"N" или "min-max". По умолчанию у демона: 18.',
+    btn_save_awg31:'💾 Сохранить настройки AWG 3.1',
   },
   en:{
     // Nav
@@ -1647,6 +1733,27 @@ const I18N={
     ssl_how_body:'Pass env vars when starting the container:<br><code style="color:var(--accent)">-e SSL_DOMAIN=vpn.example.com</code><br><code style="color:var(--accent)">-e SSL_EMAIL=admin@example.com</code><br>Port 80 must be exposed for ACME challenge. Certificate renews automatically every Tuesday at 03:00.',
     ssl_status_active:'✅ SSL active', ssl_status_inactive:'⚠️ SSL not configured',
     ssl_domain_label:'Domain:', ssl_expiry_label:'Expires:',
+    awg31_title:'AmneziaWG 3.1 Extras',
+    toggle_awg31_enabled:'Enable AWG 3.1',
+    label_awg31_hpk:'Header Protection Key',
+    tip_awg31_hpk:'Symmetric key shared by server and every peer to encrypt/decrypt packet headers. Regenerating breaks all existing peer configs until re-issued.',
+    toggle_awg31_random_trailers:'Random Trailers',
+    toggle_awg31_disable_cookies:'Disable Cookies',
+    toggle_awg31_regen_hpk:'Regenerate Key',
+    warn_awg31_random_trailers:'⚠ Known upstream bug (amneziawg-go issue #186): Random Trailers combined with wide H1-H3 ranges can silently drop transport packets. Keep H1-H3 ranges narrow if you enable this.',
+    label_awg31_padding:'Content Padding Addition',
+    tip_awg31_padding:'Bytes. "N" or "min-max". Leave empty to disable.',
+    label_awg31_rekey_after:'Rekey After Time',
+    tip_awg31_rekey_after:'Seconds. "N" or "min-max". Daemon default: 120.',
+    label_awg31_rekey_timeout:'Rekey Timeout',
+    tip_awg31_rekey_timeout:'Seconds. "N" or "min-max". Daemon default: 5.',
+    label_awg31_reject_after:'Reject After Time',
+    tip_awg31_reject_after:'Seconds. "N" or "min-max". Daemon default: 180.',
+    label_awg31_keepalive:'Keepalive Timeout',
+    tip_awg31_keepalive:'Seconds. "N" or "min-max". Daemon default: 10.',
+    label_awg31_max_handshake:'Max Handshake Attempts',
+    tip_awg31_max_handshake:'"N" or "min-max". Daemon default: 18.',
+    btn_save_awg31:'💾 Save AWG 3.1 Settings',
   }
 };
 const _ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}}
@@ -1891,6 +1998,9 @@ async function loadStatus(){
       document.getElementById('s-jmax').textContent=p.Jmax||'—';
       cpsBar.style.display='flex';
     }
+
+    // ── AWG 3.1 extras ────────────────────────────────────────────────────
+    loadAwg31(s);
   }catch(e){toast(e.message,'err');}
 }
 
@@ -1952,6 +2062,7 @@ async function loadServerSetup(){
   await loadEndpointSetting();
   try{
     const s=await api('GET','/api/server/status');
+    loadAwg31(s);
     if(s.configured && s.public_key){
       const pb=document.getElementById('sv-pubkey-block');
       pb.innerHTML='<button class="copy-btn" onclick="copyCode(\'sv-pubkey-block\')">Copy</button>'+escapeHtml(s.public_key);
@@ -1973,6 +2084,77 @@ function parseParamsFromConf(conf){
   }
   return Object.keys(map).length?map:null;
 }
+
+// ── AWG 3.1 extras ───────────────────────────────────────────────────────────
+
+const AWG31_RANGE_RE=/^\d+(-\d+)?$/;
+
+function toggleAwg31Fields(){
+  const on=document.getElementById('awg31-enabled').checked;
+  document.getElementById('awg31-fields').style.display=on?'block':'none';
+}
+
+function loadAwg31(s){
+  const enBox=document.getElementById('awg31-enabled');
+  if(!enBox) return;
+  enBox.checked=!!s.awg31_enabled;
+  toggleAwg31Fields();
+  const p=s.conf_params||{};
+  document.getElementById('awg31-hpk-text').textContent=p.HeaderProtectionKey==='set'?'•••• set (hidden) ••••':'—';
+  const rt=(p.RandomTrailers||'').trim().toLowerCase()==='on';
+  document.getElementById('awg31-random-trailers').checked=rt;
+  document.getElementById('awg31-disable-cookies').checked=(p.DisableCookies||'').trim().toLowerCase()==='on';
+  document.getElementById('awg31-rt-warning').style.display=rt?'block':'none';
+  document.getElementById('awg31-padding').value=p.ContentPaddingAddition||'';
+  document.getElementById('awg31-rekey-after').value=p.RekeyAfterTime||'';
+  document.getElementById('awg31-rekey-timeout').value=p.RekeyTimeout||'';
+  document.getElementById('awg31-reject-after').value=p.RejectAfterTime||'';
+  document.getElementById('awg31-keepalive').value=p.KeepaliveTimeout||'';
+  document.getElementById('awg31-max-handshake').value=p.MaxHandshakeAttempts||'';
+}
+
+async function saveAwg31(){
+  const enable=document.getElementById('awg31-enabled').checked;
+  const padding=document.getElementById('awg31-padding').value.trim();
+  const rekeyAfter=document.getElementById('awg31-rekey-after').value.trim();
+  const rekeyTimeout=document.getElementById('awg31-rekey-timeout').value.trim();
+  const rejectAfter=document.getElementById('awg31-reject-after').value.trim();
+  const keepalive=document.getElementById('awg31-keepalive').value.trim();
+  const maxHandshake=document.getElementById('awg31-max-handshake').value.trim();
+  if(enable){
+    const rangeFields={
+      'Content Padding Addition':padding,'Rekey After Time':rekeyAfter,'Rekey Timeout':rekeyTimeout,
+      'Reject After Time':rejectAfter,'Keepalive Timeout':keepalive,'Max Handshake Attempts':maxHandshake,
+    };
+    for(const label in rangeFields){
+      const val=rangeFields[label];
+      if(val && !AWG31_RANGE_RE.test(val)){
+        toast(label+': expected "N" or "min-max"','err');
+        return;
+      }
+    }
+  }
+  try{
+    const r=await api('POST','/api/server/awg31',{
+      enable_awg31:enable,
+      random_trailers:document.getElementById('awg31-random-trailers').checked,
+      disable_cookies:document.getElementById('awg31-disable-cookies').checked,
+      regenerate_header_key:document.getElementById('awg31-regen-hpk').checked,
+      content_padding_addition:padding,
+      rekey_after_time:rekeyAfter,
+      rekey_timeout:rekeyTimeout,
+      reject_after_time:rejectAfter,
+      keepalive_timeout:keepalive,
+      max_handshake_attempts:maxHandshake,
+    });
+    const statusEl=document.getElementById('awg31-status');
+    statusEl.textContent=(r.hot_applied?'Applied live via UAPI.':'Saved to config (full Apply Config needed to hot-apply).')+((r.logs&&r.logs.length)?' '+r.logs.join(' '):'');
+    document.getElementById('awg31-regen-hpk').checked=false;
+    toast(t('applied'));
+    loadStatus();
+  }catch(e){toast(e.message,'err');}
+}
+
 
 // ── CPS Generator ──────────────────────────────────────────────────────────
 

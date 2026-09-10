@@ -5,6 +5,7 @@ Ported from: https://github.com/Vadim-Khristenko/AmneziaWG-Architect
 
 import random
 import os
+import re
 from typing import Optional
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -843,6 +844,63 @@ def gen_cfg(inp: dict) -> dict:
     }
 
 
+_AWG31_RANGE_FIELDS = (
+    # (input key, output conf key)
+    ("content_padding_addition", "ContentPaddingAddition"),
+    ("rekey_after_time",         "RekeyAfterTime"),
+    ("rekey_timeout",            "RekeyTimeout"),
+    ("reject_after_time",        "RejectAfterTime"),
+    ("keepalive_timeout",        "KeepaliveTimeout"),
+    ("max_handshake_attempts",   "MaxHandshakeAttempts"),
+)
+
+_RANGE_OR_INT_RE = re.compile(r"^\d+(-\d+)?$")
+
+
+def gen_awg31_extra(inp: dict) -> dict:
+    """
+    Generate the optional AmneziaWG 3.1 protocol extras.
+
+    Returns {} if inp["enable_awg31"] is falsy (default — no 3.1 fields are
+    written, server stays on plain 2.0-style config).
+
+    Does NOT generate HeaderProtectionKey — that is raw symmetric key
+    material and is generated/persisted by app.py (same helper as
+    PresharedKey), not by this pure-generator module.
+
+    Numeric fields (ContentPaddingAddition/Rekey*/Keepalive*/MaxHandshake*)
+    are amneziawg-tools u16 fields — accept either a single integer "N" or
+    a range "min-max" (seconds, except ContentPaddingAddition which is
+    bytes). Left out entirely when not provided — the daemon then falls
+    back to its own built-in defaults (RekeyAfterTime=120s,
+    RekeyTimeout=5s, RejectAfterTime=180s, KeepaliveTimeout=10s,
+    MaxHandshakeAttempts=18), which is deliberately the safe default here
+    too: we don't invent our own timing values, only pass through what the
+    user explicitly set.
+
+    RandomTrailers defaults to False even when enable_awg31=True, because
+    of the known unresolved upstream bug (amnezia-vpn/amneziawg-go
+    issue #186): RandomTrailers + wide H1-H3 ranges can silently drop a
+    fraction of transport packets. The caller (app.py) is expected to
+    surface a warning in the UI when the user turns it on.
+    """
+    if not inp.get("enable_awg31"):
+        return {}
+
+    out = {
+        "RandomTrailers": bool(inp.get("random_trailers", False)),
+        "DisableCookies": bool(inp.get("disable_cookies", False)),
+    }
+    for in_key, out_key in _AWG31_RANGE_FIELDS:
+        val = str(inp.get(in_key, "") or "").strip()
+        if not val:
+            continue
+        if not _RANGE_OR_INT_RE.match(val):
+            raise ValueError(f"Invalid {out_key} value: {val!r} (expected \"N\" or \"min-max\")")
+        out[out_key] = val
+    return out
+
+
 def default_input() -> dict:
     """Return sensible defaults for generator input."""
     return {
@@ -863,6 +921,18 @@ def default_input() -> dict:
         "iter_count": 0,
         "router_mode": False,
         "use_extreme_max": False,
+        # ── AWG 3.1 extras (all optional, off by default — see gen_awg31_extra()) ──
+        "enable_awg31": False,
+        "random_trailers": False,   # ⚠ upstream issue #186: packet loss when combined
+                                     #   with wide H1-H3 ranges — keep off unless the
+                                     #   user explicitly confirms narrow H-ranges.
+        "disable_cookies": False,
+        "content_padding_addition": "",   # optional "N" or "min-max", bytes
+        "rekey_after_time": "",           # optional "N" or "min-max", seconds
+        "rekey_timeout": "",
+        "reject_after_time": "",
+        "keepalive_timeout": "",
+        "max_handshake_attempts": "",
     }
 
 
