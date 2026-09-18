@@ -1488,6 +1488,10 @@ def init_server():
         "use_tag_c": False,  # <c> unsupported by amneziawg-go obfBuilders → errno=-22
         "use_tag_t": True, "use_tag_r": True,
         "use_tag_rc": True, "use_tag_rd": False,
+        # So gen_cfg() applies the S1-S4 >= 12 bytes floor Header Protection
+        # requires, when this same /api/server/init call is also enabling
+        # AWG 3.1 extras (see awg31_inp below - same source, data.enable_awg31).
+        "enable_awg31":  bool(data.get("enable_awg31", False)),
     })
     awg_params = gen_cfg(gen_inp)
 
@@ -2077,6 +2081,11 @@ def regen_cps():
               "use_extreme_max","custom_host"):
         if k in saved:
             gen_inp[k] = saved[k]
+    # Keep respecting the S1-S4 >= 12 floor on every regen if Header
+    # Protection is already enabled on this server - otherwise a routine
+    # "Regenerate CPS" would silently drop S1-S4 back below the floor and
+    # re-break Header Protection with no error anywhere.
+    gen_inp["enable_awg31"] = bool(iface.get("HeaderProtectionKey"))
 
     awg_params = gen_cfg(gen_inp)
     logs = []
@@ -2159,6 +2168,26 @@ def server_awg31():
                    "ContentPaddingAddition", "RekeyAfterTime", "RekeyTimeout",
                    "RejectAfterTime", "KeepaliveTimeout", "MaxHandshakeAttempts")
 
+    # Header Protection requires S1-S4 >= 12 bytes (amnezia-vpn docs: "To use
+    # Header Protection, S1-S4 values must be at least 12 bytes"). A config
+    # below that floor doesn't error anywhere - the handshake just silently
+    # never completes. Rather than reject enabling here (which would make
+    # "turn on AWG 3.1 extras after a normal 2.0 setup" - the whole point of
+    # this endpoint - fail unpredictably depending on what CPS Generator
+    # happened to roll), bump only the values that are actually too low.
+    # Existing peers already need reissuing after HeaderProtectionKey changes
+    # (see docstring above) - bumping S1-S4 at the same time doesn't add a
+    # new caveat, it rides along with one that's already there.
+    s_bump = {}
+    if enable:
+        for tag in ("S1", "S2", "S3", "S4"):
+            try:
+                val = int(iface.get(tag, "0") or "0")
+            except ValueError:
+                val = 0
+            if val < 12:
+                s_bump[tag] = 12
+
     new_values = {}
     if enable:
         awg31_inp = _awg31_input_from_request(data)
@@ -2195,7 +2224,16 @@ def server_awg31():
         else:
             # not enabled / not provided this time → remove if present
             updated = re.sub(rf'^{tag}\s*=.*\n?', '', updated, flags=re.MULTILINE)
+    for tag, val in s_bump.items():
+        # These already exist (server is initialized) - always a plain replace.
+        updated = re.sub(rf'^{tag}\s*=.*$', f'{tag} = {val}', updated, flags=re.MULTILINE)
     _write_conf(_rebuild_conf(updated, _parse_peers(updated)))
+    if s_bump:
+        logs.append(
+            f"Raised {', '.join(f'{k} to {v}' for k, v in s_bump.items())} "
+            "(Header Protection requires S1-S4 >= 12 bytes) - existing peers "
+            "need their configs reissued, same as for the new HeaderProtectionKey."
+        )
 
     # ── Hot-apply via UAPI (best-effort — matches regen_cps()'s I1-I5 mechanism) ──
     hot_applied = False

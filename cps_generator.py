@@ -755,6 +755,18 @@ def gen_cfg(inp: dict) -> dict:
             s3 = rnd(65, 256)
             s3_attempts += 1
 
+    # AWG 3.1 Header Protection requires S1-S4 >= 12 bytes (per amnezia-vpn
+    # docs: "To use Header Protection, S1-S4 values must be at least 12
+    # bytes, and HeaderProtectionKey must be set" - a config below this floor
+    # doesn't error, it just silently fails to handshake). Only bump the
+    # floor when the caller is actually about to enable awg31 extras, so
+    # plain 2.0/1.x generation keeps its existing, wider distribution.
+    if inp.get("enable_awg31"):
+        s1 = max(s1, 12)
+        s2 = max(s2, 12)
+        s3 = max(s3, 12)
+        s4 = max(s4, 12)
+
     # ── Junk Train ──
     min_jc = 4 if version == "1.0" else 3
     max_jc = 128 if use_extreme_max else 15
