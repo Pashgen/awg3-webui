@@ -195,6 +195,20 @@ def _gen_keypair():
             return None, None
 
 
+def _sanitize_conf_field(s: str, maxlen: int = 96) -> str:
+    """Make a free-text value safe to embed as a single `#Key=value` line in
+    the raw INI-style awg0.conf.
+
+    The conf format has no quoting/escaping: any newline in a stored value
+    (peer name, expiry, ...) would inject arbitrary extra lines - including a
+    fake "[Peer]" section with an attacker-chosen PublicKey/AllowedIPs (e.g.
+    "0.0.0.0/0" for full-tunnel access) that _parse_peers() would then parse
+    as a real, separate peer once conf is rewritten/reloaded. Stripping CR/LF
+    closes that off; the length cap keeps a runaway value from bloating conf.
+    """
+    return s.replace("\r", " ").replace("\n", " ").strip()[:maxlen]
+
+
 def _gen_psk():
     return base64.b64encode(os.urandom(32)).decode()
 
@@ -637,6 +651,51 @@ def _cgroup_memory() -> tuple:
     return 0, 0
 
 
+def _cgroup_cpu_usage() -> tuple:
+    """Return (used_ns, ncpus) - this container's own cgroup CPU accounting.
+
+    used_ns: cumulative CPU time consumed by the cgroup (all its threads,
+    across all cores), in nanoseconds, since cgroup creation.
+    ncpus: number of CPUs available to the cgroup - from its quota/period
+    if one is set, else the host's visible CPU count (os.cpu_count()).
+    Used to normalize used_ns into a 0-100% gauge the same way /proc/stat's
+    idle-ratio naturally is, instead of a raw core-seconds figure that can
+    exceed 100% on a multi-core box.
+    Returns (0, 0) if cgroup CPU files aren't readable - caller falls back
+    to host-wide /proc/stat (same reasoning as _cgroup_memory()).
+    """
+    try:  # cgroup v2 (unified)
+        usage_usec = 0
+        with open('/sys/fs/cgroup/cpu.stat') as f:
+            for line in f:
+                if line.startswith('usage_usec'):
+                    usage_usec = int(line.split()[1])
+                    break
+        with open('/sys/fs/cgroup/cpu.max') as f:
+            quota_raw, period_raw = f.read().split()
+        ncpus = (os.cpu_count() or 1) if quota_raw == 'max' \
+            else max(1.0, int(quota_raw) / int(period_raw))
+        return usage_usec * 1000, ncpus
+    except Exception:
+        pass
+    try:  # cgroup v1 fallback
+        with open('/sys/fs/cgroup/cpuacct/cpuacct.usage') as f:
+            used_ns = int(f.read().strip())
+        quota, period = -1, 100000
+        try:
+            with open('/sys/fs/cgroup/cpu/cpu.cfs_quota_us') as f:
+                quota = int(f.read().strip())
+            with open('/sys/fs/cgroup/cpu/cpu.cfs_period_us') as f:
+                period = int(f.read().strip())
+        except Exception:
+            pass
+        ncpus = (os.cpu_count() or 1) if quota <= 0 else max(1.0, quota / period)
+        return used_ns, ncpus
+    except Exception:
+        pass
+    return 0, 0
+
+
 def _system_resources() -> dict:
     """Return load average, CPU% and memory stats for THIS container.
 
@@ -658,14 +717,25 @@ def _system_resources() -> dict:
             load_avg = float(f.read().split()[0])
     except Exception:
         pass
-    # CPU% via two /proc/stat reads with 200ms delta
+    # CPU% via a single 200ms sample window. Prefer this container's own
+    # cgroup CPU accounting - same reasoning as the memory fix above:
+    # /proc/stat alone reflects the whole host (or, under Docker Desktop,
+    # the whole Linux VM), not this container's own CPU usage. Falls back
+    # to the old host-wide /proc/stat idle-ratio when cgroup CPU files
+    # aren't readable at all.
     try:
         t1, i1 = _read_cpu_stat()
+        cg1, cg_ncpus = _cgroup_cpu_usage()
         _time.sleep(0.2)
         t2, i2 = _read_cpu_stat()
-        dt = t2 - t1
-        di = i2 - i1
-        cpu_pct = int((1 - di / dt) * 100) if dt > 0 else 0
+        cg2, _ = _cgroup_cpu_usage()
+        if cg1 and cg_ncpus:
+            delta_ns = cg2 - cg1
+            cpu_pct = int(delta_ns / (0.2e9 * cg_ncpus) * 100)
+        else:
+            dt = t2 - t1
+            di = i2 - i1
+            cpu_pct = int((1 - di / dt) * 100) if dt > 0 else 0
         cpu_pct = max(0, min(100, cpu_pct))
     except Exception:
         pass
@@ -826,7 +896,11 @@ def _check_alerts(running: bool, configured: bool, peer_stats: dict) -> list:
     if not running and configured:
         alerts.append({'level': 'error', 'msg': 'AWG daemon is not running'})
     for pub, s in peer_stats.items():
-        ts = s.get('handshake_ts', 0)
+        # peer_stats keys the raw handshake timestamp as "last_handshake"
+        # (see _awg_peer_stats()) - "handshake_ts" was never a real key here,
+        # so this alert silently never fired regardless of how stale a
+        # peer's handshake actually was.
+        ts = s.get('last_handshake', 0)
         if ts > 0 and (now - ts) > 7200:
             h = int((now - ts) / 3600)
             alerts.append({'level': 'warn',
@@ -1777,8 +1851,8 @@ def add_peer():
     except RuntimeError as e:
         return jsonify({"error": str(e)}), 400
 
-    name   = data.get("name", f"peer-{peer_pub[:8]}")
-    expiry = data.get("expiry", "").strip()
+    name   = _sanitize_conf_field(data.get("name", f"peer-{peer_pub[:8]}"))
+    expiry = _sanitize_conf_field(data.get("expiry", ""), maxlen=32)
 
     gen_inp = default_input()
     gen_inp.update({
