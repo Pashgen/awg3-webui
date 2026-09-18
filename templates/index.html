@@ -1470,6 +1470,7 @@ let selectedProfile='quic_initial';
 let peersCache=[];
 let trafficHistory={};  // pub_key -> [{t, rx, tx}]
 let trafficChart=null;
+let trafficChartInterval=null;  // live-refresh timer while the traffic chart modal is open
 
 // ── i18n ───────────────────────────────────────────────────────────────────
 const I18N={
@@ -1843,6 +1844,14 @@ document.addEventListener('DOMContentLoaded',()=>{
     const peersSection=document.getElementById('s-peers');
     if(peersSection&&peersSection.classList.contains('active')) loadPeers();
   },30000);
+
+  // Auto-refresh dashboard status every 15s when on dashboard tab - otherwise
+  // "Active Now" / RAM / CPU stay frozen at whatever they were on last load,
+  // and a peer that just went offline keeps showing as active indefinitely.
+  setInterval(()=>{
+    const dashSection=document.getElementById('s-dashboard');
+    if(dashSection&&dashSection.classList.contains('active')) loadStatus();
+  },15000);
 
   // Restore traffic stats toggle state
   const savedTraffic=_ls.get('awg_traffic_stats');
@@ -2399,6 +2408,27 @@ async function showTrafficChart(idx){
       }
     }
   });
+
+  // Keep the chart live while the modal stays open - it used to draw one
+  // static snapshot and never update again, so it looked "frozen" even
+  // though the peer's real traffic/online state kept changing underneath.
+  if(trafficChartInterval) clearInterval(trafficChartInterval);
+  trafficChartInterval=setInterval(async()=>{
+    if(!document.getElementById('peer-modal').classList.contains('open')||!trafficChart){
+      clearInterval(trafficChartInterval);
+      trafficChartInterval=null;
+      return;
+    }
+    try{
+      const fresh=await fetch('/api/peers/'+encodeURIComponent(p.public_key)+'/traffic').then(r=>r.ok?r.json():[]);
+      if(fresh&&fresh.length){
+        trafficChart.data.labels=fresh.map(x=>new Date((x.ts||x.t)*1000).toLocaleTimeString());
+        trafficChart.data.datasets[0].data=fresh.map(x=>x.rx||0);
+        trafficChart.data.datasets[1].data=fresh.map(x=>x.tx||0);
+        trafficChart.update();
+      }
+    }catch(_){}
+  },20000);
 }
 
 async function viewPeerConf(idx){
@@ -2581,6 +2611,7 @@ function openModal(title, body){
 
 function closeModal(){
   document.getElementById('peer-modal').classList.remove('open');
+  if(trafficChartInterval){ clearInterval(trafficChartInterval); trafficChartInterval=null; }
 }
 
 // ── Add Peer ───────────────────────────────────────────────────────────────
