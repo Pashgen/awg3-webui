@@ -695,8 +695,10 @@ def _get_geo(ip: str) -> dict:
         with urllib.request.urlopen(url, timeout=3) as resp:
             data = json.loads(resp.read())
         cc = data.get('countryCode', '')
-        flag = (''.join(chr(0x1F1E0 + ord(c) - ord('A')) for c in cc.upper())
-                if len(cc) == 2 else '')
+        # Regional Indicator Symbols start at U+1F1E6 ('A'); 'A'+offset builds
+        # the two-letter flag emoji from an ISO 3166-1 alpha-2 country code.
+        flag = (''.join(chr(0x1F1E6 + ord(c) - ord('A')) for c in cc.upper())
+                if len(cc) == 2 and cc.isalpha() else '')
         result = {'country': data.get('country', ''), 'cc': cc, 'flag': flag, 'ts': now}
     except Exception:
         result = {'country': '', 'cc': '', 'flag': '', 'ts': now}
