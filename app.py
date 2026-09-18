@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AWG 2.0 Web UI — Flask backend.
+AWG 3.1 Web UI — Flask backend.
 Manages AmneziaWG 2.0 server: peers, config, CPS generation, QR codes.
 """
 

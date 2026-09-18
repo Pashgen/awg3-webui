@@ -1,5 +1,5 @@
 # =============================================================================
-# AWG 2.0 Web UI — built entirely from amnezia-vpn sources
+# AWG 3.1 Web UI — built entirely from amnezia-vpn sources
 # Stage 1: amneziawg-go  (Go, multi-arch: amd64 / arm64 / arm/v7)
 # Stage 2: awg-tools     (C: awg + awg-quick)
 # Stage 3: Runtime Alpine + Flask Web UI

@@ -1,4 +1,4 @@
-# AWG 2.0 Web UI
+# AWG 3.1 Web UI
 
 <div align="center">
 
