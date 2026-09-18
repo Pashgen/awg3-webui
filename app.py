@@ -608,8 +608,47 @@ def _read_cpu_stat():
         return 0, 0
 
 
+def _cgroup_memory() -> tuple:
+    """Return (used_bytes, limit_bytes) from THIS container's own cgroup.
+
+    limit_bytes is 0 when the container has no memory limit configured
+    (cgroup v2 memory.max == "max", or v1's unlimited sentinel value).
+    Returns (0, 0) if cgroup memory files aren't readable at all (e.g. cgroups
+    not namespaced in this environment) - caller falls back to /proc/meminfo.
+    """
+    try:  # cgroup v2 (unified) - default on modern Docker and RouterOS containers
+        with open('/sys/fs/cgroup/memory.current') as f:
+            used = int(f.read().strip())
+        with open('/sys/fs/cgroup/memory.max') as f:
+            raw = f.read().strip()
+            limit = 0 if raw == 'max' else int(raw)
+        return used, limit
+    except Exception:
+        pass
+    try:  # cgroup v1 fallback
+        with open('/sys/fs/cgroup/memory/memory.usage_in_bytes') as f:
+            used = int(f.read().strip())
+        with open('/sys/fs/cgroup/memory/memory.limit_in_bytes') as f:
+            raw = int(f.read().strip())
+        limit = 0 if raw > (1 << 62) else raw  # v1 reports a huge sentinel when unlimited
+        return used, limit
+    except Exception:
+        pass
+    return 0, 0
+
+
 def _system_resources() -> dict:
-    """Return load average, CPU% and memory stats from /proc."""
+    """Return load average, CPU% and memory stats for THIS container.
+
+    Memory prefers this container's own cgroup accounting (so it reflects
+    what's actually capped by e.g. RouterOS's /container memory-max, not
+    the whole host/VM) and only falls back to host-wide /proc/meminfo when
+    cgroup memory files aren't available - a container's /proc/meminfo is
+    NOT cgroup-namespaced by default, so it always reports the host's
+    (or, under Docker Desktop, the Linux VM's) total/used memory rather
+    than this process's own footprint, which is misleading for exactly
+    the "how much RAM is this app actually using" question this is for.
+    """
     import time as _time
     load_avg = 0.0
     mem_total = mem_used = mem_pct = 0
@@ -630,6 +669,7 @@ def _system_resources() -> dict:
         cpu_pct = max(0, min(100, cpu_pct))
     except Exception:
         pass
+    host_total = 0
     try:
         mem = {}
         with open('/proc/meminfo') as f:
@@ -637,12 +677,19 @@ def _system_resources() -> dict:
                 parts = line.split()
                 if parts[0] in ('MemTotal:', 'MemAvailable:', 'MemFree:'):
                     mem[parts[0][:-1]] = int(parts[1]) * 1024
-        mem_total = mem.get('MemTotal', 0)
+        host_total = mem.get('MemTotal', 0)
         mem_avail = mem.get('MemAvailable', mem.get('MemFree', 0))
-        mem_used  = mem_total - mem_avail
-        mem_pct   = int(mem_used / mem_total * 100) if mem_total else 0
+        mem_total, mem_used = host_total, host_total - mem_avail
     except Exception:
         pass
+    cg_used, cg_limit = _cgroup_memory()
+    if cg_used:
+        mem_used = cg_used
+        # No explicit container limit set -> report against host total (still the
+        # best available denominator), but the numerator is now this container's
+        # own usage instead of the whole host's.
+        mem_total = cg_limit if cg_limit else host_total
+    mem_pct = int(mem_used / mem_total * 100) if mem_total else 0
     return {'load_avg': load_avg, 'cpu_pct': cpu_pct,
             'mem_total': mem_total, 'mem_used': mem_used, 'mem_pct': mem_pct}
 
