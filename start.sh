@@ -1,5 +1,5 @@
 #!/bin/sh
-# AWG 2.0 Web UI — container entrypoint
+# AWG 3.1 Web UI — container entrypoint
 # Starts AWG (if config exists) + nginx + Flask via supervisord
 
 set -e
@@ -11,7 +11,7 @@ NGINX_CONF="/etc/nginx/nginx.conf"
 ACME_WEBROOT="/var/www/acme"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  AWG 2.0 Web UI — starting"
+echo "  AWG 3.1 Web UI — starting"
 echo "  Interface : $AWG_IF"
 echo "  Config    : $AWG_CONF"
 echo "  AWG port  : ${AWG_PORT:-51820}/udp"

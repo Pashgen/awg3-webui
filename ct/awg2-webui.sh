@@ -5,7 +5,7 @@ source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxV
 # License: MIT | https://github.com/Pashgen/awg2-webui/raw/main/LICENSE
 # Source: https://github.com/Pashgen/awg2-webui
 
-APP="AWG 2.0 Web UI"
+APP="AWG 3.1 Web UI"
 var_tags="${var_tags:-vpn;wireguard;amnezia}"
 var_cpu="${var_cpu:-2}"
 var_ram="${var_ram:-512}"
@@ -24,7 +24,7 @@ function update_script() {
   check_container_storage
   check_container_resources
 
-  msg_info "Updating AWG 2.0 Web UI"
+  msg_info "Updating AWG 3.1 Web UI"
   $STD docker pull pashgen/awg2-webui:latest
   $STD docker stop awg2-webui
   $STD docker rm awg2-webui
@@ -40,7 +40,7 @@ function update_script() {
     -p 80:80 \
     -p 51820:51820/udp \
     pashgen/awg2-webui:latest
-  msg_ok "Updated AWG 2.0 Web UI"
+  msg_ok "Updated AWG 3.1 Web UI"
   exit
 }
 

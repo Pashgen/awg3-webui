@@ -1,5 +1,5 @@
 #!/bin/bash
-# ─── Multi-arch build & push for AWG 2.0 Web UI ─────────────────────────────
+# ─── Multi-arch build & push for AWG 3.1 Web UI ─────────────────────────────
 # Usage:
 #   ./build.sh                        # build + push latest
 #   ./build.sh --tag v1.2.3           # build + push with version tag
@@ -31,7 +31,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  AWG 2.0 Web UI — Multi-arch Build"
+echo "  AWG 3.1 Web UI — Multi-arch Build"
 echo "  Image    : ${IMAGE}:${TAG}"
 echo "  Platforms: $PLATFORMS"
 echo "  Push     : $PUSH"

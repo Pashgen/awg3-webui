@@ -842,7 +842,8 @@ tr.peer-suspended{opacity:.6;}
           <div class="form-group">
             <label data-i18n="label_version">AWG Version</label>
             <select id="sv-version">
-              <option value="2.0" selected data-i18n="opt_awg20">AWG 2.0 (recommended)</option>
+              <option value="3.1" selected data-i18n="opt_awg31">AWG 3.1 (recommended)</option>
+              <option value="2.0" data-i18n="opt_awg20">AWG 2.0</option>
               <option value="1.5">AWG 1.5</option>
               <option value="1.0">AWG 1.0</option>
             </select>
@@ -925,7 +926,7 @@ tr.peer-suspended{opacity:.6;}
           <div class="card-title" style="font-size:14px" data-i18n="sv_pubkey_title">Server Public Key</div>
           <div class="code-block" id="sv-pubkey-block"><button class="copy-btn" onclick="copyCode('sv-pubkey-block')">Copy</button></div>
           <hr class="divider">
-          <div class="card-title" style="font-size:14px" data-i18n="sv_params_title">Generated AWG 2.0 Parameters</div>
+          <div class="card-title" style="font-size:14px" data-i18n="sv_params_title">Generated AWG Parameters</div>
           <div class="param-grid" id="sv-params-grid"></div>
         </div>
       </div>
@@ -999,7 +1000,7 @@ tr.peer-suspended{opacity:.6;}
     <!-- CPS GENERATOR -->
     <div id="s-generator" class="section">
       <div class="card">
-        <div class="card-title">🔮 <span data-i18n="gen_title">CPS Parameter Generator</span> <span class="badge">AWG 2.0</span></div>
+        <div class="card-title">🔮 <span data-i18n="gen_title">CPS Parameter Generator</span> <span class="badge">AWG 2.0/3.1</span></div>
 
         <!-- What is CPS -->
         <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;margin-bottom:18px;border-left:3px solid var(--accent);font-size:13px;line-height:1.6;color:var(--muted)">
@@ -1014,7 +1015,8 @@ tr.peer-suspended{opacity:.6;}
               <span class="help-tip" data-i18n-tooltip="tip_version" data-tooltip="">?</span>
             </label>
             <select id="g-version">
-              <option value="2.0" selected data-i18n="opt_awg20">AWG 2.0 (recommended)</option>
+              <option value="3.1" selected data-i18n="opt_awg31">AWG 3.1 (recommended)</option>
+              <option value="2.0" data-i18n="opt_awg20">AWG 2.0</option>
               <option value="1.5">AWG 1.5</option>
               <option value="1.0">AWG 1.0</option>
             </select>
@@ -1202,7 +1204,8 @@ tr.peer-suspended{opacity:.6;}
           <div class="form-group">
             <label data-i18n="label_version">AWG Version</label>
             <select id="p-version">
-              <option value="2.0" selected>AWG 2.0</option>
+              <option value="3.1" selected>AWG 3.1</option>
+              <option value="2.0">AWG 2.0</option>
               <option value="1.5">AWG 1.5</option>
               <option value="1.0">AWG 1.0</option>
             </select>
@@ -1366,7 +1369,7 @@ tr.peer-suspended{opacity:.6;}
           <div id="qr-area-new" style="display:none">
             <div class="qr-container" id="qr-container-new"></div>
           </div>
-          <div class="card-title" style="font-size:14px;margin-top:12px" data-i18n="peer_awg_params">AWG 2.0 Parameters</div>
+          <div class="card-title" style="font-size:14px;margin-top:12px" data-i18n="peer_awg_params">AWG Parameters</div>
           <div class="param-grid" id="peer-params-grid"></div>
         </div>
       </div>
@@ -1488,11 +1491,11 @@ const I18N={
     toggle_extreme_max:'Extreme Max', toggle_regen_keys:'Перегенерировать ключи',
     btn_init:'⚡ Инициализировать / Обновить',
     sv_pubkey_title:'Публичный ключ сервера',
-    sv_params_title:'Сгенерированные параметры AWG 2.0',
+    sv_params_title:'Сгенерированные параметры AWG',
     // CPS Generator
     gen_title:'Генератор параметров CPS',
     gen_what_title:'Что такое CPS?',
-    gen_what_body:'CPS (Custom Protocol Signature) — набор параметров обфускации для AWG 2.0. Они заставляют VPN-трафик выглядеть как QUIC, DNS, SIP и другие UDP-протоколы, обходя DPI-блокировку.<br><b style="color:var(--text)">Как использовать:</b> выбери профиль → нажми Generate → скопируй параметры в конфиг сервера или в Add Peer.',
+    gen_what_body:'CPS (Custom Protocol Signature) — набор параметров обфускации для AWG 2.0/3.1. Они заставляют VPN-трафик выглядеть как QUIC, DNS, SIP и другие UDP-протоколы, обходя DPI-блокировку.<br><b style="color:var(--text)">Как использовать:</b> выбери профиль → нажми Generate → скопируй параметры в конфиг сервера или в Add Peer.',
     label_bfp:'Browser Fingerprint', label_mimic_profile:'Профиль маскировки',
     label_mtu:'MTU:', label_jc_count:'Junk Count (Jc):', label_custom_host:'Custom Host (опционально)',
     ph_custom_host:'например: yandex.net',
@@ -1522,7 +1525,7 @@ const I18N={
     label_client_conf:'Конфиг клиента (.conf)',
     btn_download_conf:'⬇ Скачать .conf', btn_qr_code:'📱 QR Code',
     peer_hint:'📱 <b style="color:var(--text)">AmneziaWG</b> (Android/iOS) — сканируй QR &nbsp;·&nbsp; <b style="color:var(--text)">Amnezia VPN</b> — кнопка ⬇ Скачать .conf → импортируй файл',
-    peer_awg_params:'Параметры AWG 2.0',
+    peer_awg_params:'Параметры AWG',
     // Raw Config
     raw_title:'Сырой конфиг',
     // Settings
@@ -1539,7 +1542,7 @@ const I18N={
     conn_connected:'✅ Подключено к AmneziaWG Web UI',
     conn_public_ip:'Публичный IP', conn_ip_unknown:'Публичный IP не определён',
     awg_running:'AWG: запущен', awg_stopped:'AWG: остановлен', awg_not_configured:'AWG: не настроен',
-    opt_awg20:'AWG 2.0 (рекомендуется)', opt_disabled:'Отключён', opt_none:'Нет', opt_random:'Случайный',
+    opt_awg31:'AWG 3.1 (рекомендуется)', opt_awg20:'AWG 2.0', opt_disabled:'Отключён', opt_none:'Нет', opt_random:'Случайный',
     btn_otl:'🔗 Одноразовая ссылка', btn_delete:'🗑 Удалить', btn_traffic_chart:'📈 График трафика',
     peer_never:'Никогда',
     no_conf_title:'⚠️ Нет сохранённого конфига',
@@ -1556,7 +1559,7 @@ const I18N={
     confirm_delete:'Удалить пира',
     err_no_conf:'Нет конфига', err_nothing_generated:'Сначала нажми Generate',
     // Tooltips
-    tip_version:'AWG 2.0 — максимум: динамические заголовки H1-H4, паддинги S1-S4, CPS-пакеты I1-I5.\nAWG 1.5 — junk-пакеты + маскировка под UDP-протокол.\nAWG 1.0 — только junk-пакеты (базовая обфускация).',
+    tip_version:'AWG 3.1 — как 2.0, плюс HeaderProtectionKey, RandomTrailers, DisableCookies и настраиваемые тайминги (вкладка AWG 3.1 Extras).\nAWG 2.0 — максимум: динамические заголовки H1-H4, паддинги S1-S4, CPS-пакеты I1-I5.\nAWG 1.5 — junk-пакеты + маскировка под UDP-протокол.\nAWG 1.0 — только junk-пакеты (базовая обфускация).',
     tip_intensity:'Low — минимальные накладные расходы, слабее маскировка.\nMedium — оптимальный баланс (рекомендуется).\nHigh — максимальная маскировка, чуть больше трафика.',
     tip_bfp:'Браузерный fingerprint добавляется в CPS-сигнатуру (I1-пакет).\nТрафик выглядит как запрос именно этого браузера.\nDisabled — не использовать fingerprint.',
     tip_mimic_profile:'Профиль маскировки — какой UDP-протокол имитирует трафик.\nQUIC — QUIC Initial (Chrome/браузеры). DNS — DNS-запрос. SIP — VoIP-протокол.\nВыбирай по тому, что не блокируется в твоей сети.',
@@ -1631,11 +1634,11 @@ const I18N={
     toggle_extreme_max:'Extreme Max', toggle_regen_keys:'Regenerate Keys',
     btn_init:'⚡ Initialize / Update',
     sv_pubkey_title:'Server Public Key',
-    sv_params_title:'Generated AWG 2.0 Parameters',
+    sv_params_title:'Generated AWG Parameters',
     // CPS Generator
     gen_title:'CPS Parameter Generator',
     gen_what_title:'What is CPS?',
-    gen_what_body:'CPS (Custom Protocol Signature) — a set of obfuscation parameters for AWG 2.0. They make VPN traffic look like QUIC, DNS, SIP and other UDP protocols, bypassing DPI filtering.<br><b style="color:var(--text)">How to use:</b> choose a profile → click Generate → copy parameters to the server config or Add Peer.',
+    gen_what_body:'CPS (Custom Protocol Signature) — a set of obfuscation parameters for AWG 2.0/3.1. They make VPN traffic look like QUIC, DNS, SIP and other UDP protocols, bypassing DPI filtering.<br><b style="color:var(--text)">How to use:</b> choose a profile → click Generate → copy parameters to the server config or Add Peer.',
     label_bfp:'Browser Fingerprint', label_mimic_profile:'Mimic Profile',
     label_mtu:'MTU:', label_jc_count:'Junk Count (Jc):', label_custom_host:'Custom Host (optional)',
     ph_custom_host:'e.g.: yandex.net',
@@ -1665,7 +1668,7 @@ const I18N={
     label_client_conf:'Client Config (.conf)',
     btn_download_conf:'⬇ Download .conf', btn_qr_code:'📱 QR Code',
     peer_hint:'📱 <b style="color:var(--text)">AmneziaWG</b> (Android/iOS) — scan QR &nbsp;·&nbsp; <b style="color:var(--text)">Amnezia VPN</b> — ⬇ Download .conf → import file',
-    peer_awg_params:'AWG 2.0 Parameters',
+    peer_awg_params:'AWG Parameters',
     // Raw Config
     raw_title:'Raw Config',
     // Settings
@@ -1682,7 +1685,7 @@ const I18N={
     conn_connected:'✅ Connected to AmneziaWG Web UI',
     conn_public_ip:'Public IP', conn_ip_unknown:'Public IP not detected',
     awg_running:'AWG: Running', awg_stopped:'AWG: Stopped', awg_not_configured:'AWG: Not configured',
-    opt_awg20:'AWG 2.0 (recommended)', opt_disabled:'Disabled', opt_none:'None', opt_random:'Random',
+    opt_awg31:'AWG 3.1 (recommended)', opt_awg20:'AWG 2.0', opt_disabled:'Disabled', opt_none:'None', opt_random:'Random',
     btn_otl:'🔗 One-Time Link', btn_delete:'🗑 Delete', btn_traffic_chart:'📈 Traffic Chart',
     peer_never:'Never',
     no_conf_title:'⚠️ No stored config',
@@ -1699,7 +1702,7 @@ const I18N={
     confirm_delete:'Delete peer',
     err_no_conf:'No config', err_nothing_generated:'Nothing generated yet',
     // Tooltips
-    tip_version:'AWG 2.0 — maximum: dynamic headers H1-H4, padding S1-S4, CPS packets I1-I5.\nAWG 1.5 — junk packets + UDP protocol masking.\nAWG 1.0 — junk packets only (basic obfuscation).',
+    tip_version:'AWG 3.1 — like 2.0, plus HeaderProtectionKey, RandomTrailers, DisableCookies and configurable timing (see the AWG 3.1 Extras tab).\nAWG 2.0 — maximum: dynamic headers H1-H4, padding S1-S4, CPS packets I1-I5.\nAWG 1.5 — junk packets + UDP protocol masking.\nAWG 1.0 — junk packets only (basic obfuscation).',
     tip_intensity:'Low — minimal overhead, weaker masking.\nMedium — optimal balance (recommended).\nHigh — maximum masking, slightly more traffic.',
     tip_bfp:'Browser fingerprint is embedded in the CPS signature (I1 packet).\nTraffic looks like a request from that specific browser.\nDisabled — do not use fingerprint.',
     tip_mimic_profile:'Masking profile — which UDP protocol the traffic mimics.\nQUIC — QUIC Initial (Chrome/browsers). DNS — DNS query. SIP — VoIP protocol.\nChoose what is not blocked on your network.',
@@ -2191,12 +2194,12 @@ async function generate(){
 function buildSnippet(r){
   const v=r.version||'2.0';
   const lines=['[Interface]'];
-  if(v==='2.0'){lines.push('H1 = '+r.H1,'H2 = '+r.H2,'H3 = '+r.H3,'H4 = '+r.H4);}
+  if(v==='2.0'||v==='3.1'){lines.push('H1 = '+r.H1,'H2 = '+r.H2,'H3 = '+r.H3,'H4 = '+r.H4);}
   else{lines.push('H1 = '+r.H1s,'H2 = '+r.H2s,'H3 = '+r.H3s,'H4 = '+r.H4s);}
   lines.push('S1 = '+r.S1,'S2 = '+r.S2);
-  if(v==='2.0'){lines.push('S3 = '+r.S3,'S4 = '+r.S4);}
+  if(v==='2.0'||v==='3.1'){lines.push('S3 = '+r.S3,'S4 = '+r.S4);}
   lines.push('Jc = '+r.Jc,'Jmin = '+r.Jmin,'Jmax = '+r.Jmax);
-  if(v==='2.0'){
+  if(v==='2.0'||v==='3.1'){
     ['I1','I2','I3','I4','I5'].forEach(t=>{if(r[t])lines.push(t+' = '+r[t]);});
   }
   return lines.join('\n');

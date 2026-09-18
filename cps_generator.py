@@ -685,7 +685,9 @@ def gen_cfg(inp: dict) -> dict:
     Generate a full AWG configuration.
 
     inp keys:
-      version: "1.0" | "1.5" | "2.0"
+      version: "1.0" | "1.5" | "2.0" | "3.1"  (3.1 uses identical CPS output to 2.0;
+                                    the extra 3.1-only fields are generated separately
+                                    by gen_awg31_extra())
       intensity: "low" | "medium" | "high"
       profile: mimic profile string
       iter_count: int (auto-boost on failure)

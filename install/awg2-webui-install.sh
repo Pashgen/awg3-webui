@@ -43,11 +43,11 @@ msg_info "Loading AmneziaWG kernel module support"
 $STD modprobe wireguard 2>/dev/null || true
 msg_ok "Kernel modules ready"
 
-msg_info "Pulling AWG 2.0 Web UI image"
+msg_info "Pulling AWG 3.1 Web UI image"
 $STD docker pull pashgen/awg2-webui:latest
 msg_ok "Pulled pashgen/awg2-webui:latest"
 
-msg_info "Starting AWG 2.0 Web UI"
+msg_info "Starting AWG 3.1 Web UI"
 docker run -d \
   --name awg2-webui \
   --cap-add NET_ADMIN \
@@ -63,7 +63,7 @@ docker run -d \
   -e WEB_PASS=changeme \
   -e AWG_ENDPOINT=auto \
   pashgen/awg2-webui:latest >/dev/null
-msg_ok "Started AWG 2.0 Web UI"
+msg_ok "Started AWG 3.1 Web UI"
 
 motd_ssh
 customize

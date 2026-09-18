@@ -780,7 +780,7 @@ def _build_client_conf(peer_priv: str, peer_pub: str, server_pub: str,
     lines.append(f"DNS = {dns}")
 
     version = awg_params.get("version", "2.0")
-    if version == "2.0":
+    if version in ("2.0", "3.1"):
         lines += [f"H1 = {awg_params['H1']}", f"H2 = {awg_params['H2']}",
                   f"H3 = {awg_params['H3']}", f"H4 = {awg_params['H4']}"]
     else:
@@ -788,11 +788,11 @@ def _build_client_conf(peer_priv: str, peer_pub: str, server_pub: str,
                   f"H3 = {awg_params['H3s']}", f"H4 = {awg_params['H4s']}"]
 
     lines += [f"S1 = {awg_params['S1']}", f"S2 = {awg_params['S2']}"]
-    if version == "2.0":
+    if version in ("2.0", "3.1"):
         lines += [f"S3 = {awg_params['S3']}", f"S4 = {awg_params['S4']}"]
     lines += [f"Jc = {awg_params['Jc']}", f"Jmin = {awg_params['Jmin']}", f"Jmax = {awg_params['Jmax']}"]
     # I1-I5: client-side CPS (independent per peer, server doesn't need to match)
-    if version == "2.0":
+    if version in ("2.0", "3.1"):
         for tag in ("I1","I2","I3","I4","I5"):
             if awg_params.get(tag):
                 lines.append(f"{tag} = {awg_params[tag]}")
@@ -1500,7 +1500,7 @@ def init_server():
     # DNS is client-only — server doesn't need it and awg-quick would fail
     # trying to configure resolvconf which is not available in the container
 
-    if version == "2.0":
+    if version in ("2.0", "3.1"):
         lines += [f"H1 = {awg_params['H1']}", f"H2 = {awg_params['H2']}",
                   f"H3 = {awg_params['H3']}", f"H4 = {awg_params['H4']}"]
     else:
@@ -1508,10 +1508,10 @@ def init_server():
                   f"H3 = {awg_params['H3s']}", f"H4 = {awg_params['H4s']}"]
 
     lines += [f"S1 = {awg_params['S1']}", f"S2 = {awg_params['S2']}"]
-    if version == "2.0":
+    if version in ("2.0", "3.1"):
         lines += [f"S3 = {awg_params['S3']}", f"S4 = {awg_params['S4']}"]
     lines += [f"Jc = {awg_params['Jc']}", f"Jmin = {awg_params['Jmin']}", f"Jmax = {awg_params['Jmax']}"]
-    if version == "2.0":
+    if version in ("2.0", "3.1"):
         for tag in ("I1","I2","I3","I4","I5"):
             if awg_params.get(tag):
                 lines.append(f"{tag} = {awg_params[tag]}")
