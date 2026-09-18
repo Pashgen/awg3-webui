@@ -493,8 +493,21 @@ def _next_ip(conf: str) -> str:
     raise RuntimeError("IP pool exhausted")
 
 
+_public_ip_cache: dict = {"ip": "", "ts": 0.0}
+_PUBLIC_IP_TTL = 600  # seconds — avoid hitting third-party IP-lookup services on every dashboard load
+
+
 def _detect_public_ip() -> str:
-    """Always curl an external service to get the real public IP of this host."""
+    """Return the real public IP of this host, cached for _PUBLIC_IP_TTL seconds.
+
+    Only curls an external service (ifconfig.me / api.ipify.org / icanhazip.com)
+    when the cache is empty or stale — a public IP rarely changes within a
+    session, and querying it on every /api/server/status poll unnecessarily
+    exposes this host's IP to those third parties and adds request latency.
+    """
+    now = time.time()
+    if _public_ip_cache["ip"] and now - _public_ip_cache["ts"] < _PUBLIC_IP_TTL:
+        return _public_ip_cache["ip"]
     for url in ["https://ifconfig.me", "https://api.ipify.org", "https://icanhazip.com"]:
         try:
             ip = subprocess.check_output(
@@ -502,10 +515,12 @@ def _detect_public_ip() -> str:
                 stderr=subprocess.DEVNULL
             ).decode().strip()
             if re.match(r"^\d{1,3}(\.\d{1,3}){3}$", ip):
+                _public_ip_cache["ip"] = ip
+                _public_ip_cache["ts"] = now
                 return ip
         except Exception:
             continue
-    return ""
+    return _public_ip_cache["ip"]  # stale cache beats nothing if all lookups fail
 
 
 def _get_endpoint() -> str:
