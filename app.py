@@ -1055,7 +1055,14 @@ def _build_client_conf(peer_priv: str, peer_pub: str, server_pub: str,
     lines += ["", "[Peer]", f"PublicKey = {server_pub}"]
     if psk:
         lines.append(f"PresharedKey = {psk}")
-    lines += [f"Endpoint = {endpoint}", "AllowedIPs = 0.0.0.0/0, ::/0", "PersistentKeepalive = 25"]
+    # IPv6 deliberately NOT routed into the tunnel: this router has
+    # IPv6 fully disabled (disable-ipv6=yes on ac3/CHR, no IPv6 address
+    # or forwarding on the AWG interface). Advertising "::/0" here made
+    # clients (esp. iOS, which prefers IPv6 aggressively) route AAAA-
+    # resolved connections into a tunnel with nowhere to send them —
+    # they black-holed silently while IPv4 DNS/traffic kept working,
+    # producing "connected but nothing loads".
+    lines += [f"Endpoint = {endpoint}", "AllowedIPs = 0.0.0.0/0", "PersistentKeepalive = 25"]
     return "\n".join(lines) + "\n"
 
 
