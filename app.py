@@ -1168,20 +1168,26 @@ def _awg_peer_stats() -> dict:
             cached = _transfer_cache.get(pub, {})
             if 'rx' not in cached:
                 # First time seeing this peer after restart.
-                # If bytes > 0, peer was recently active — use now as timestamp
-                # so UI shows activity instead of "Never" right after Flask restart.
-                first_updated = now if (rx_b > 0 or tx_b > 0) else 0
+                # Only rx (bytes FROM the peer) proves it's actually there and
+                # talking back — use now as timestamp so UI shows activity
+                # instead of "Never" right after Flask restart.
+                first_updated = now if rx_b > 0 else 0
                 _transfer_cache[pub] = {'rx': rx_b, 'tx': tx_b, 'updated': first_updated}
-            elif rx_b != cached['rx'] or tx_b != cached['tx']:
-                # Transfer bytes actually changed between polls — real activity
-                _transfer_cache[pub] = {'rx': rx_b, 'tx': tx_b, 'updated': now}
+            else:
+                # Only bump the freshness timestamp when RX changed. TX keeps
+                # climbing even for a dead/unreachable peer (the server just
+                # keeps firing outbound UDP packets, fire-and-forget, with no
+                # reply needed) — using tx here made a peer that had actually
+                # dropped show as "active" forever on the dashboard.
+                new_updated = now if rx_b != cached['rx'] else cached['updated']
+                _transfer_cache[pub] = {'rx': rx_b, 'tx': tx_b, 'updated': new_updated}
             transfer_updated = _transfer_cache.get(pub, {}).get('updated', 0)
-            transfer_age = now - transfer_updated  # seconds since last change
+            transfer_age = now - transfer_updated  # seconds since last real rx change
 
-            # Active: handshake within 3 min  OR  transfer changed within 60s
-            # PersistentKeepalive=25s means connected peers always generate traffic.
-            # No new bytes for 60s → peer is disconnected.
-            active = (age is not None and age < 180) or (transfer_age < 60 and (rx_b > 0 or tx_b > 0))
+            # Active: handshake within 3 min  OR  rx bytes changed within 60s.
+            # PersistentKeepalive=25s means a genuinely connected peer keeps
+            # sending traffic back to us too, not just receiving from us.
+            active = (age is not None and age < 180) or (transfer_age < 60 and rx_b > 0)
 
             # Handshake display string
             # amneziawg-go doesn't report handshake_ts via UAPI → use transfer activity time
