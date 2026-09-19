@@ -16,7 +16,19 @@ COPY patches/obf_counter.go      /patches/obf_counter.go
 COPY patches/obf_counter_test.go /patches/obf_counter_test.go
 
 WORKDIR /build
-RUN git clone --depth=1 https://github.com/amnezia-vpn/amneziawg-go.git . && \
+# Pinned to v3.0.3 (cf9d2dd20282), NOT floating HEAD. This used to be an
+# unpinned `--depth=1` clone of master, meaning every rebuild silently picked
+# up whatever the upstream tip was that day. Two rebuilds tonight (image
+# rename, active-peer-detection fix) each pulled a newer, untested commit —
+# and the resulting binary drops almost all outbound relay packets under
+# load (confirmed on ac3 via raw NAT session counters: 622 packets in from a
+# real client, only 7 replies out — reproduced identically on both AWG 2.0
+# and 3.1 configs, and with obfuscation stripped down to Jc=0, ruling out
+# app-level config as the cause). v3.0.3 is the last tagged release before
+# the 3.1 protocol extension landed - closest known-good point to what was
+# actually running before tonight's redeploys.
+RUN git clone https://github.com/amnezia-vpn/amneziawg-go.git . && \
+    git checkout cf9d2dd20282 && \
     # ── Apply <c> tag patch ───────────────────────────────────────────── \
     # 1) Copy counterObf implementation into device/ package
     cp /patches/obf_counter.go      device/obf_counter.go && \
