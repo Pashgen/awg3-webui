@@ -84,6 +84,57 @@ AWG_GO        = "/usr/bin/amneziawg-go"
 # ─────────────────────────────────────────────────────────────────────────────
 
 app = Flask(__name__, template_folder="templates")
+
+# ── Split WebUI access/error logging ─────────────────────────────────────────
+# supervisord.conf points flask's stdout_logfile AND stderr_logfile at the
+# same shared /var/log/supervisor/flask.log, and LOG_FILES used to map both
+# the "WebUI Access" and "WebUI Error" tabs to that identical path - so the
+# two tabs in Settings -> System Logs always showed exactly the same content,
+# which is what prompted this fix. Give each its own file, split by level:
+# werkzeug's per-request INFO lines go to _WEBUI_ACCESS_LOG, anything WARNING
+# or above (including our own app.logger.error() calls) goes to
+# _WEBUI_ERROR_LOG. flask.log itself is kept as-is (see LOG_FILES below,
+# "WebUI Startup/Crash") since it's still the only place a hard crash before
+# these handlers attach, or a raw print(), would land.
+_WEBUI_ACCESS_LOG = "/var/log/supervisor/webui_access.log"
+_WEBUI_ERROR_LOG   = "/var/log/supervisor/webui_error.log"
+
+
+def _setup_split_logging():
+    try:
+        from logging.handlers import RotatingFileHandler
+
+        class _MaxLevelFilter(logging.Filter):
+            def __init__(self, max_level):
+                super().__init__()
+                self.max_level = max_level
+
+            def filter(self, record):
+                return record.levelno <= self.max_level
+
+        fmt = logging.Formatter("%(asctime)s %(message)s", "%d/%b/%Y %H:%M:%S")
+
+        access_handler = RotatingFileHandler(_WEBUI_ACCESS_LOG, maxBytes=5 * 1024 * 1024, backupCount=2)
+        access_handler.setFormatter(fmt)
+        access_handler.addFilter(_MaxLevelFilter(logging.INFO))
+
+        error_handler = RotatingFileHandler(_WEBUI_ERROR_LOG, maxBytes=5 * 1024 * 1024, backupCount=2)
+        error_handler.setFormatter(fmt)
+        error_handler.setLevel(logging.WARNING)
+
+        for logger_name in ("werkzeug", None):  # None = Flask's app.logger
+            lg = logging.getLogger(logger_name) if logger_name else app.logger
+            lg.handlers = []
+            lg.propagate = False
+            lg.setLevel(logging.INFO)
+            lg.addHandler(access_handler)
+            lg.addHandler(error_handler)
+    except Exception as e:
+        # Don't let a logging-setup problem take the whole app down - worst
+        # case, Access/Error just fall back to whatever they were before.
+        print(f"[AWG Web UI] Split logging setup failed: {e}")
+
+
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.jinja_env.auto_reload = True
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
@@ -2689,11 +2740,15 @@ def prometheus_metrics():
 # ── System logs ───────────────────────────────────────────────────────────────
 
 LOG_FILES = {
-    "Nginx Access":    "/var/log/nginx/access.log",
-    "Nginx Error":     "/var/log/nginx/error.log",
-    "Supervisor":      "/var/log/supervisor/supervisord.log",
-    "WebUI Access":    "/var/log/supervisor/flask.log",
-    "WebUI Error":     "/var/log/supervisor/flask.log",
+    "Nginx Access":       "/var/log/nginx/access.log",
+    "Nginx Error":        "/var/log/nginx/error.log",
+    "Supervisor":         "/var/log/supervisor/supervisord.log",
+    "WebUI Access":       _WEBUI_ACCESS_LOG,
+    "WebUI Error":        _WEBUI_ERROR_LOG,
+    # Raw supervisord-captured stdout+stderr - startup banner, auto-start
+    # apply logs, and anything that crashes before _setup_split_logging()
+    # attaches its own handlers (or bypasses logging entirely via print()).
+    "WebUI Startup/Crash": "/var/log/supervisor/flask.log",
 }
 
 
@@ -2805,5 +2860,6 @@ def _auto_start_awg():
 if __name__ == "__main__":
     print(f"[AWG Web UI] Starting on port {WEB_PORT}")
     print(f"[AWG Web UI] Config: {AWG_CONF_PATH}")
+    _setup_split_logging()
     _auto_start_awg()
     app.run(host="0.0.0.0", port=WEB_PORT, debug=False)
