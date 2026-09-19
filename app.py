@@ -696,6 +696,74 @@ def _cgroup_cpu_usage() -> tuple:
     return 0, 0
 
 
+_cpu_cache: dict = {"ts": None, "host_total": 0, "host_idle": 0,
+                    "cg_used": 0, "cg_ncpus": 0.0, "pct": 0}
+
+
+def _sample_cpu_pct() -> int:
+    """Return CPU% without blocking the (single-threaded) Flask dev server.
+
+    _system_resources() used to take two /proc/stat (or cgroup) readings
+    200ms apart, sleeping the whole request thread in between. That was
+    fine when this only ran once per dashboard navigation, but the
+    dashboard now auto-polls /api/server/status every 15s (see the
+    dashboard-freeze fix) - a permanent 200ms stall every 15s would block
+    every other request, including a second browser tab or admin, since
+    this app isn't run with threaded=True.
+
+    Instead, keep the last sample in a module-level cache and diff against
+    it on the NEXT poll - 15s between samples gives a far less noisy delta
+    than 200ms ever did anyway. Only the very first call in the process's
+    lifetime does one blocking 200ms measurement, so the first-ever status
+    response isn't just a meaningless 0%.
+    """
+    global _cpu_cache
+    now_mono = time.monotonic()
+    cg_used, cg_ncpus = _cgroup_cpu_usage()
+    host_total, host_idle = _read_cpu_stat()
+    prev = _cpu_cache
+
+    if prev["ts"] is None:
+        try:
+            time.sleep(0.2)
+            cg2, _ = _cgroup_cpu_usage()
+            host_total2, host_idle2 = _read_cpu_stat()
+            if cg_used and cg_ncpus:
+                pct = int((cg2 - cg_used) / (0.2e9 * cg_ncpus) * 100)
+            else:
+                dt = host_total2 - host_total
+                di = host_idle2 - host_idle
+                pct = int((1 - di / dt) * 100) if dt > 0 else 0
+            pct = max(0, min(100, pct))
+            _cpu_cache = {"ts": now_mono, "host_total": host_total2, "host_idle": host_idle2,
+                          "cg_used": cg2, "cg_ncpus": cg_ncpus, "pct": pct}
+        except Exception:
+            _cpu_cache = {"ts": now_mono, "host_total": host_total, "host_idle": host_idle,
+                          "cg_used": cg_used, "cg_ncpus": cg_ncpus, "pct": 0}
+        return _cpu_cache["pct"]
+
+    elapsed = now_mono - prev["ts"]
+    if elapsed < 1.0:
+        # Too soon since the last sample for a meaningful delta.
+        return prev["pct"]
+
+    try:
+        if cg_used and cg_ncpus:
+            delta_ns = cg_used - prev["cg_used"]
+            pct = int(delta_ns / (elapsed * 1e9 * cg_ncpus) * 100)
+        else:
+            dt = host_total - prev["host_total"]
+            di = host_idle - prev["host_idle"]
+            pct = int((1 - di / dt) * 100) if dt > 0 else prev["pct"]
+        pct = max(0, min(100, pct))
+    except Exception:
+        pct = prev["pct"]
+
+    _cpu_cache = {"ts": now_mono, "host_total": host_total, "host_idle": host_idle,
+                  "cg_used": cg_used, "cg_ncpus": cg_ncpus, "pct": pct}
+    return pct
+
+
 def _system_resources() -> dict:
     """Return load average, CPU% and memory stats for THIS container.
 
@@ -708,7 +776,6 @@ def _system_resources() -> dict:
     than this process's own footprint, which is misleading for exactly
     the "how much RAM is this app actually using" question this is for.
     """
-    import time as _time
     load_avg = 0.0
     mem_total = mem_used = mem_pct = 0
     cpu_pct = 0
@@ -717,26 +784,11 @@ def _system_resources() -> dict:
             load_avg = float(f.read().split()[0])
     except Exception:
         pass
-    # CPU% via a single 200ms sample window. Prefer this container's own
-    # cgroup CPU accounting - same reasoning as the memory fix above:
-    # /proc/stat alone reflects the whole host (or, under Docker Desktop,
-    # the whole Linux VM), not this container's own CPU usage. Falls back
-    # to the old host-wide /proc/stat idle-ratio when cgroup CPU files
-    # aren't readable at all.
+    # CPU% - see _sample_cpu_pct() for why this is a non-blocking delta
+    # against the previous poll rather than a blocking 200ms measurement
+    # on every single request.
     try:
-        t1, i1 = _read_cpu_stat()
-        cg1, cg_ncpus = _cgroup_cpu_usage()
-        _time.sleep(0.2)
-        t2, i2 = _read_cpu_stat()
-        cg2, _ = _cgroup_cpu_usage()
-        if cg1 and cg_ncpus:
-            delta_ns = cg2 - cg1
-            cpu_pct = int(delta_ns / (0.2e9 * cg_ncpus) * 100)
-        else:
-            dt = t2 - t1
-            di = i2 - i1
-            cpu_pct = int((1 - di / dt) * 100) if dt > 0 else 0
-        cpu_pct = max(0, min(100, cpu_pct))
+        cpu_pct = _sample_cpu_pct()
     except Exception:
         pass
     host_total = 0
