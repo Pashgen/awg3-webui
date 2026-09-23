@@ -225,6 +225,14 @@ ${IP_BLOCK}
             proxy_set_header   Authorization     \$http_authorization;
             proxy_set_header   Cookie            \$http_cookie;
             proxy_read_timeout 120s;
+            # Buffer entire upstream response in memory instead of spilling to
+            # disk (/var/lib/nginx/tmp/proxy/...) — default buffer size (a few
+            # 4-8k pages) is smaller than the dashboard's full HTML/JS page,
+            # so every "GET /" was hitting disk I/O on every single request.
+            proxy_buffering         on;
+            proxy_buffers           16 32k;
+            proxy_buffer_size       32k;
+            proxy_busy_buffers_size 64k;
         }
     }
 }
@@ -257,6 +265,10 @@ ${IP_BLOCK}
             proxy_set_header   Authorization     \$http_authorization;
             proxy_set_header   Cookie            \$http_cookie;
             proxy_read_timeout 120s;
+            proxy_buffering         on;
+            proxy_buffers           16 32k;
+            proxy_buffer_size       32k;
+            proxy_busy_buffers_size 64k;
         }
     }
 }
