@@ -1,1 +1,1400 @@
-cat /tmp/push_index.html
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWG 3.1 Web UI</title>
+<style>
+/* ── Design System (PRVTPRO-inspired) ──────────────────────────────────── */
+:root{
+  --bg-primary:#0a0a0f;--bg-secondary:#12121a;--bg-card:#1a1a26;--bg-card-hover:#22223a;
+  --bg-input:rgba(22,22,34,.4);--bg-modal:rgba(10,10,15,.92);
+  --border-color:rgba(255,255,255,.06);--border-hover:rgba(255,255,255,.12);
+  --border-focus:rgba(139,92,246,.5);
+  --text-primary:#f0f0f5;--text-secondary:#8b8ba0;--text-muted:#5a5a70;
+  --accent:#8b5cf6;--accent-light:#a78bfa;--accent-dark:#7c3aed;
+  --accent-glow:rgba(139,92,246,.25);
+  --accent-grad:linear-gradient(135deg,#7c3aed,#2d2f71);
+  --success:#22c55e;--success-bg:rgba(34,197,94,.12);--success-border:rgba(34,197,94,.25);
+  --danger:#ef4444;--danger-bg:rgba(239,68,68,.12);--danger-border:rgba(239,68,68,.25);
+  --warning:#f59e0b;--warning-bg:rgba(245,158,11,.12);
+  --info:#3b82f6;--info-bg:rgba(59,130,246,.12);
+  --radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:20px;--radius-full:9999px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);--shadow-md:0 4px 16px rgba(0,0,0,.4);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.5);--shadow-glow:0 0 30px rgba(139,92,246,.15);
+  --shadow-card:0 4px 24px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.04);
+  --transition:.25s cubic-bezier(.4,0,.2,1);--transition-fast:.15s cubic-bezier(.4,0,.2,1);
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',sans-serif;
+  /* legacy aliases for parts of HTML using old vars */
+  --bg:var(--bg-primary);--surface:var(--bg-card);--surface2:var(--bg-card-hover);
+  --surface3:#1e2235;--border:var(--border-color);--border2:var(--border-hover);
+  --accent2:#22d3ee;--ok:var(--success);--warn:var(--warning);
+  --text:var(--text-primary);--muted:var(--text-muted);
+  --radius:var(--radius-lg);--radius-sm:8px;
+  --grad:var(--accent-grad);--shadow:var(--shadow-md);
+}
+[data-theme="light"]{
+  --bg-primary:#f5f5f9;--bg-secondary:#eeeef3;--bg-card:#fff;--bg-card-hover:#f8f8fc;
+  --bg-input:rgba(0,0,0,.03);--bg-modal:rgba(255,255,255,.92);
+  --border-color:rgba(0,0,0,.08);--border-hover:rgba(0,0,0,.15);
+  --text-primary:#1a1a2e;--text-secondary:#5a5a78;--text-muted:#9090a8;
+  --accent:#7c3aed;--accent-light:#8b5cf6;--accent-dark:#6d28d9;
+  --accent-glow:rgba(124,58,237,.15);
+  --success:#16a34a;--success-bg:rgba(22,163,74,.08);--success-border:rgba(22,163,74,.2);
+  --danger:#dc2626;--danger-bg:rgba(220,38,38,.06);--danger-border:rgba(220,38,38,.15);
+  --warning:#d97706;--warning-bg:rgba(217,119,6,.08);
+  --shadow-card:0 2px 12px rgba(0,0,0,.06),0 0 0 1px rgba(0,0,0,.03);
+  --shadow-glow:0 0 20px rgba(124,58,237,.08);
+  --bg:var(--bg-primary);--surface:var(--bg-card);--surface2:var(--bg-card-hover);
+  --border:var(--border-color);--border2:var(--border-hover);
+  --text:var(--text-primary);--muted:var(--text-muted);--ok:var(--success);--warn:var(--warning);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{-webkit-font-smoothing:antialiased;}
+body{
+  font-family:var(--font);background:var(--bg-primary);color:var(--text-primary);
+  line-height:1.6;min-height:100vh;overflow-x:hidden;font-size:14px;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 600px 400px at 20% 10%,rgba(99,102,241,.08),transparent),
+    radial-gradient(ellipse 500px 500px at 80% 80%,rgba(139,92,246,.06),transparent),
+    radial-gradient(ellipse 800px 300px at 50% 50%,rgba(79,70,229,.04),transparent);
+}
+a{color:var(--accent-light);text-decoration:none;transition:color var(--transition-fast);}
+a:hover{color:var(--accent);}
+::selection{background:rgba(139,92,246,.3);color:#fff;}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(139,92,246,.3);border-radius:var(--radius-full);}
+::-webkit-scrollbar-thumb:hover{background:rgba(139,92,246,.5);}
+
+/* ── Layout ────────────────────────────────────────────────────────────── */
+.layout{display:flex;min-height:100vh;}
+.sidebar{
+  width:220px;background:var(--bg-card);border-right:1px solid var(--border-color);
+  padding:20px 0;flex-shrink:0;display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;
+}
+.logo{padding:0 20px 16px;border-bottom:1px solid var(--border-color);margin-bottom:12px;}
+.logo h2{font-size:18px;font-weight:800;color:var(--accent-light);letter-spacing:-.3px;}
+.logo span{font-size:11px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;
+  color:var(--text-muted);transition:all var(--transition);border-left:2px solid transparent;
+  font-size:13.5px;font-weight:500;
+}
+.nav-item:hover{background:rgba(139,92,246,.06);color:var(--text-primary);}
+.nav-item.active{background:linear-gradient(90deg,rgba(139,92,246,.12),transparent);color:var(--accent-light);border-left-color:var(--accent);font-weight:600;}
+.nav-item .icon{font-size:15px;width:20px;text-align:center;}
+.main{flex:1;padding:28px 32px;overflow-y:auto;}
+.section{display:none;}
+.section.active{display:block;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ── Cards ─────────────────────────────────────────────────────────────── */
+.card{
+  background:var(--bg-card);border:1px solid var(--border-color);
+  border-radius:var(--radius-lg);padding:24px;
+  box-shadow:var(--shadow-card);transition:all var(--transition);margin-bottom:20px;
+}
+.card:hover{border-color:var(--border-hover);}
+.card-title{
+  font-size:1rem;font-weight:700;margin-bottom:18px;
+  display:flex;align-items:center;gap:8px;color:var(--text-primary);
+}
+
+/* ── Stat cards ────────────────────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:0;}
+.stat-card{
+  background:var(--bg-secondary);border:1px solid var(--border-color);
+  border-radius:var(--radius-md);padding:16px;
+  position:relative;overflow:hidden;transition:all var(--transition);
+}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent-grad);}
+.stat-card:hover{border-color:var(--border-hover);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.3);}
+.stat-label{font-size:10px;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;font-weight:600;}
+.stat-value{font-size:22px;font-weight:800;color:var(--text-primary);line-height:1.1;}
+.stat-value.ok{color:var(--success);}.stat-value.accent{color:var(--accent-light);}
+.stat-value.accent2{color:#22d3ee;}.stat-value.small{font-size:13px;font-weight:600;line-height:1.4;}
+
+/* ── Progress bar ──────────────────────────────────────────────────────── */
+.progress-bar{height:3px;background:var(--bg-primary);border-radius:2px;margin-top:8px;overflow:hidden;}
+.progress-bar>div{height:100%;background:var(--accent-grad);border-radius:2px;transition:width .5s ease;}
+
+/* ── Status banner ─────────────────────────────────────────────────────── */
+#conn-status-banner{
+  display:flex;align-items:center;gap:16px;padding:16px 20px;
+  border-radius:var(--radius-lg);margin-bottom:20px;
+  background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(45,47,113,.06));
+  border:1px solid rgba(139,92,246,.2);position:relative;overflow:hidden;
+  box-shadow:var(--shadow-card);
+}
+
+/* ── CPS info bar ──────────────────────────────────────────────────────── */
+.cps-info-bar{
+  display:flex;flex-wrap:wrap;gap:16px;align-items:center;
+  padding:12px 16px;
+  background:linear-gradient(135deg,rgba(139,92,246,.06),rgba(45,47,113,.04));
+  border:1px solid rgba(139,92,246,.2);border-radius:var(--radius-md);
+  font-size:12px;margin-top:14px;color:var(--text-secondary);
+}
+.cps-info-bar code{color:#22d3ee;font-family:'SF Mono','Fira Code',monospace;font-size:11px;}
+.cps-info-bar strong{color:var(--text-primary);}
+
+/* ── Alerts ────────────────────────────────────────────────────────────── */
+.alerts-block{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+.alert{padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;line-height:1.4;}
+.alert-error{background:var(--danger-bg);border-left:3px solid var(--danger);color:var(--danger);}
+.alert-warn{background:var(--warning-bg);border-left:3px solid var(--warning);color:var(--warning);}
+
+/* ── Peers / Client cards ──────────────────────────────────────────────── */
+.clients-list{display:flex;flex-direction:column;gap:8px;}
+.client-item{
+  display:flex;align-items:center;gap:16px;
+  padding:14px 18px;background:var(--bg-card);
+  border:1px solid var(--border-color);border-radius:var(--radius-md);
+  transition:all var(--transition-fast);
+}
+.client-item:hover{border-color:var(--border-hover);background:var(--bg-card-hover);}
+.client-item.suspended{opacity:.55;}
+.client-avatar{
+  width:40px;height:40px;border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800;color:#fff;flex-shrink:0;
+}
+.client-info{flex:1;min-width:0;}
+.client-name{font-weight:600;font-size:.92rem;color:var(--text-primary);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.client-meta{
+  font-size:.78rem;color:var(--text-muted);display:flex;gap:14px;margin-top:3px;flex-wrap:wrap;align-items:center;
+  font-family:'SF Mono','Fira Code',monospace;
+}
+.client-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot.active{background:var(--success);box-shadow:0 0 0 3px rgba(34,197,94,.2);animation:pulse-ok 2s infinite;}
+.dot.inactive{background:var(--bg-card-hover);border:1px solid var(--border-hover);}
+@keyframes pulse-ok{0%,100%{box-shadow:0 0 0 3px rgba(34,197,94,.2);}50%{box-shadow:0 0 0 5px rgba(34,197,94,.05);}}
+.peer-flag{font-size:15px;margin-left:2px;}
+.peer-latency{font-size:11px;color:var(--text-muted);font-family:monospace;}
+
+/* ── Traffic ───────────────────────────────────────────────────────────── */
+.traffic-badge{
+  display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
+  border-radius:var(--radius-full);font-size:.7rem;font-weight:500;
+  font-family:'SF Mono','Fira Code',monospace;
+}
+.traffic-down{background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2);}
+.traffic-up{background:rgba(59,130,246,.1);color:#3b82f6;border:1px solid rgba(59,130,246,.2);}
+
+/* ── Forms ─────────────────────────────────────────────────────────────── */
+.form-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+.form-group{flex:1;min-width:160px;}
+.form-group.full{flex:0 0 100%;}
+label{display:block;font-size:.75rem;color:var(--text-muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+input,select,textarea{
+  width:100%;background:var(--bg-input);border:1px solid var(--border-color);
+  color:var(--text-primary);border-radius:var(--radius-md);padding:10px 14px;
+  font-size:.88rem;outline:none;transition:all var(--transition-fast);font-family:var(--font);
+}
+input:focus,select:focus,textarea:focus{border-color:var(--border-focus);box-shadow:0 0 0 3px var(--accent-glow);background:var(--bg-secondary);}
+input::placeholder{color:var(--text-muted);}
+textarea{resize:vertical;min-height:80px;font-family:'SF Mono','Fira Code',monospace;font-size:.78rem;}
+input[type=range]{padding:4px 0;cursor:pointer;accent-color:var(--accent);}
+.range-val{font-weight:700;color:#22d3ee;min-width:32px;display:inline-block;text-align:right;}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b8ba0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-color:var(--bg-input);padding-right:32px;cursor:pointer;}
+
+/* ── Toggles ───────────────────────────────────────────────────────────── */
+.toggle-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+.toggle{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;}
+.toggle input{display:none;}
+.toggle-track{width:36px;height:20px;background:var(--bg-secondary);border:1px solid var(--border-hover);border-radius:10px;position:relative;transition:all .25s;flex-shrink:0;}
+.toggle-track::after{content:'';position:absolute;left:3px;top:3px;width:12px;height:12px;background:var(--text-muted);border-radius:50%;transition:all .25s;}
+.toggle input:checked+.toggle-track{background:var(--accent);border-color:var(--accent);}
+.toggle input:checked+.toggle-track::after{left:19px;background:#fff;}
+.toggle-label{font-size:.8rem;color:var(--text-secondary);}
+.toggle input:checked~.toggle-label{color:var(--text-primary);}
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;border-radius:var(--radius-md);border:none;
+  cursor:pointer;font-size:.875rem;font-weight:600;transition:all var(--transition);
+  font-family:var(--font);position:relative;overflow:hidden;white-space:nowrap;
+}
+.btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.1),transparent);opacity:0;transition:opacity var(--transition-fast);}
+.btn:hover::before{opacity:1;}
+.btn-primary{background:var(--accent-grad);color:#fff;box-shadow:0 2px 12px rgba(139,92,246,.3);}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(139,92,246,.4);}
+.btn-success{background:var(--success-bg);color:var(--success);border:1px solid var(--success-border);}
+.btn-success:hover{background:rgba(34,197,94,.2);}
+.btn-danger{background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-border);}
+.btn-danger:hover{background:rgba(239,68,68,.2);}
+.btn-ghost{background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-color);}
+.btn-ghost:hover{border-color:var(--border-hover);background:var(--bg-card-hover);color:var(--text-primary);}
+.btn-sm{padding:5px 12px;font-size:.78rem;border-radius:var(--radius-sm);}
+.btn-icon{width:32px;height:32px;padding:0;border-radius:var(--radius-sm);font-size:1rem;}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none;}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
+/* ── Badges ────────────────────────────────────────────────────────────── */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:var(--radius-full);
+  font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+}
+.badge{background:rgba(139,92,246,.15);color:var(--accent-light);border:1px solid rgba(139,92,246,.25);}
+.badge.ok,.badge-success{background:var(--success-bg);color:var(--success);border:1px solid var(--success-border);}
+.badge.warn,.badge-warn{background:var(--warning-bg);color:var(--warning);border:1px solid rgba(245,158,11,.25);}
+.badge.danger,.badge-danger{background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-border);}
+.badge.suspended{background:rgba(100,116,139,.1);color:var(--text-muted);border:1px solid rgba(100,116,139,.2);}
+
+/* ── Code blocks ───────────────────────────────────────────────────────── */
+.code-block{
+  background:var(--bg-primary);border:1px solid var(--border-color);border-radius:var(--radius-md);
+  padding:16px;font-family:'SF Mono','Fira Code',monospace;font-size:.78rem;
+  white-space:pre;overflow-x:auto;color:var(--text-secondary);position:relative;line-height:1.7;
+}
+.copy-btn{
+  position:absolute;top:8px;right:8px;background:var(--bg-card);border:1px solid var(--border-color);
+  color:var(--text-muted);border-radius:6px;padding:4px 10px;font-size:.7rem;cursor:pointer;transition:all .15s;
+}
+.copy-btn:hover{color:var(--accent-light);border-color:var(--border-focus);}
+
+/* ── Param grid ────────────────────────────────────────────────────────── */
+.param-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.param-item{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:10px 14px;}
+.param-key{font-size:10px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+.param-val{font-family:'SF Mono','Fira Code',monospace;font-size:.78rem;color:#22d3ee;word-break:break-all;}
+
+/* ── Profile grid ──────────────────────────────────────────────────────── */
+.profile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;}
+.profile-btn{padding:9px 10px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-sm);cursor:pointer;text-align:center;font-size:.78rem;font-weight:500;color:var(--text-muted);transition:all var(--transition);}
+.profile-btn:hover{border-color:rgba(139,92,246,.5);color:var(--text-primary);background:rgba(139,92,246,.08);}
+.profile-btn.selected{background:rgba(139,92,246,.15);border-color:var(--accent);color:var(--accent-light);font-weight:700;}
+
+/* ── Help tip ──────────────────────────────────────────────────────────── */
+.help-tip{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-muted);font-size:10px;font-weight:700;cursor:help;margin-left:4px;vertical-align:middle;position:relative;}
+.help-tip:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+.help-tip[data-tooltip]::after{content:attr(data-tooltip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--border-hover);color:var(--text-primary);font-size:11px;font-weight:400;padding:8px 12px;border-radius:var(--radius-sm);white-space:pre-line;min-width:200px;max-width:300px;line-height:1.5;pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;text-align:left;box-shadow:var(--shadow-lg);}
+.help-tip[data-tooltip]:hover::after{opacity:1;}
+
+/* ── Divider ───────────────────────────────────────────────────────────── */
+.divider{border:none;border-top:1px solid var(--border-color);margin:18px 0;}
+
+/* ── Modal ─────────────────────────────────────────────────────────────── */
+.modal-overlay{display:none;position:fixed;inset:0;background:var(--bg-modal);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg-card);border:1px solid var(--border-hover);border-radius:var(--radius-xl);padding:28px;width:90%;max-width:620px;max-height:90vh;overflow-y:auto;position:relative;box-shadow:var(--shadow-lg);animation:modalIn .2s ease;}
+@keyframes modalIn{from{transform:scale(.95) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.modal-close{position:absolute;top:14px;right:18px;background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-muted);font-size:16px;cursor:pointer;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1;}
+.modal-close:hover{background:var(--danger-bg);border-color:var(--danger);color:var(--danger);}
+.modal-title{font-size:1.1rem;font-weight:700;margin-bottom:18px;color:var(--text-primary);}
+.qr-container{text-align:center;padding:16px;}
+.qr-container img{max-width:260px;border-radius:var(--radius-md);border:4px solid rgba(255,255,255,.9);box-shadow:0 8px 32px rgba(0,0,0,.4);}
+
+/* ── Peers table ───────────────────────────────────────────────────────── */
+.peers-table{width:100%;border-collapse:collapse;}
+.peers-table th{text-align:left;padding:8px 10px;font-size:10px;color:var(--text-muted);border-bottom:1px solid var(--border-color);font-weight:700;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;}
+.peers-table td{padding:12px 10px;border-bottom:1px solid var(--border-color);font-size:13px;vertical-align:middle;transition:background .15s;}
+.peers-table tr:last-child td{border-bottom:none;}
+.peers-table tbody tr:hover td{background:rgba(139,92,246,.04);}
+.peer-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;}
+tr.peer-suspended{opacity:.55;}
+
+/* ── Toast ─────────────────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast-msg{background:var(--bg-card);border:1px solid var(--border-hover);color:var(--text-primary);padding:11px 18px;border-radius:var(--radius-md);font-size:.85rem;font-weight:500;animation:toastIn .3s cubic-bezier(.34,1.56,.64,1);max-width:360px;box-shadow:var(--shadow-lg);}
+.toast-msg.ok{border-color:var(--success-border);background:rgba(34,197,94,.08);}
+.toast-msg.err{border-color:var(--danger-border);background:rgba(239,68,68,.08);}
+@keyframes toastIn{from{transform:translateX(110%);opacity:0}to{transform:none;opacity:1}}
+  --surface2:#162030;
+  --surface3:#1e2c40;
+  --border:#243040;
+  --border2:#2e3e54;
+  --accent:#7c5df4;
+  --accent2:#22d3ee;
+  --accent3:#f472b6;
+  --danger:#f43f5e;
+  --warn:#fb923c;
+  --ok:#4ade80;
+  --text:#e2e8f0;
+  --muted:#64748b;
+  --radius:14px;
+  --radius-sm:8px;
+  --grad:linear-gradient(135deg,#7c5df4,#22d3ee);
+  --grad-ok:linear-gradient(135deg,#4ade80,#22d3ee);
+  --grad-warn:linear-gradient(135deg,#fb923c,#f43f5e);
+  --shadow:0 8px 32px rgba(0,0,0,.5);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.3);
+  --glow-accent:0 0 24px rgba(124,93,244,.25);
+  --glow-ok:0 0 16px rgba(74,222,128,.3);
+  --glass:rgba(13,17,23,.7);
+}
+[data-theme="light"]{
+  --bg:#f1f5fb;--surface:#ffffff;--surface2:#eef2f9;--surface3:#e4eaf5;
+  --border:#d8e0ef;--border2:#c8d4e8;
+  --text:#0f172a;--muted:#64748b;
+  --glass:rgba(255,255,255,.8);
+  --shadow:0 8px 32px rgba(0,0,0,.1);
+}
+
+/* ── Reset ─────────────────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',system-ui,sans-serif;
+  font-size:14px;
+  min-height:100vh;
+  line-height:1.5;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% -10%,rgba(124,93,244,.12) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 110%,rgba(34,211,238,.08) 0%,transparent 60%);
+  background-attachment:fixed;
+}
+
+/* ── Layout ────────────────────────────────────────────────────────────── */
+.layout{display:flex;min-height:100vh;}
+.main{flex:1;padding:28px 32px;overflow-y:auto;max-width:1400px;}
+
+/* ── Sidebar ───────────────────────────────────────────────────────────── */
+.sidebar{
+  width:230px;
+  background:var(--glass);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-right:1px solid var(--border);
+  padding:20px 0;
+  flex-shrink:0;
+  display:flex;
+  flex-direction:column;
+  position:sticky;top:0;height:100vh;
+}
+.logo{
+  padding:0 20px 20px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:12px;
+}
+.logo h2{
+  font-size:20px;font-weight:800;
+  background:var(--grad);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  letter-spacing:-.3px;
+}
+.logo span{font-size:11px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px 10px 20px;
+  cursor:pointer;
+  color:var(--muted);
+  transition:all .2s;
+  border-left:2px solid transparent;
+  border-radius:0;
+  margin:1px 0;
+  font-size:13.5px;font-weight:500;
+}
+.nav-item:hover{
+  background:rgba(124,93,244,.08);
+  color:var(--text);
+  border-left-color:rgba(124,93,244,.4);
+}
+.nav-item.active{
+  background:linear-gradient(90deg,rgba(124,93,244,.15),transparent);
+  color:var(--accent);
+  border-left-color:var(--accent);
+  font-weight:600;
+}
+.nav-item .icon{font-size:15px;width:20px;text-align:center;}
+
+/* ── Cards ─────────────────────────────────────────────────────────────── */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:22px 24px;
+  margin-bottom:20px;
+  box-shadow:var(--shadow-sm);
+  transition:border-color .2s;
+}
+.card:hover{border-color:var(--border2);}
+.card-title{
+  font-size:14px;font-weight:700;
+  margin-bottom:18px;
+  display:flex;align-items:center;gap:8px;
+  color:var(--text);
+  text-transform:uppercase;letter-spacing:.6px;
+}
+
+/* ── Badges ────────────────────────────────────────────────────────────── */
+.badge{
+  font-size:11px;font-weight:700;
+  padding:3px 10px;
+  border-radius:20px;
+  letter-spacing:.3px;
+  text-transform:uppercase;
+}
+.badge{background:rgba(124,93,244,.2);color:var(--accent);border:1px solid rgba(124,93,244,.3);}
+.badge.ok{background:rgba(74,222,128,.15);color:var(--ok);border:1px solid rgba(74,222,128,.3);}
+.badge.warn{background:rgba(251,146,60,.15);color:var(--warn);border:1px solid rgba(251,146,60,.3);}
+.badge.danger{background:rgba(244,63,94,.15);color:var(--danger);border:1px solid rgba(244,63,94,.3);}
+.badge.suspended{background:rgba(100,116,139,.1);color:var(--muted);border:1px solid rgba(100,116,139,.2);}
+
+/* ── Help tips ─────────────────────────────────────────────────────────── */
+.help-tip{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:15px;height:15px;border-radius:50%;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--muted);font-size:10px;font-weight:700;
+  cursor:help;margin-left:4px;vertical-align:middle;position:relative;
+}
+.help-tip:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+.help-tip[data-tooltip]::after{
+  content:attr(data-tooltip);
+  position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:var(--surface3);border:1px solid var(--border2);color:var(--text);
+  font-size:11px;font-weight:400;padding:8px 12px;border-radius:8px;
+  white-space:pre-line;min-width:200px;max-width:300px;line-height:1.5;
+  pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;
+  text-align:left;box-shadow:var(--shadow);
+}
+.help-tip[data-tooltip]:hover::after{opacity:1;}
+
+/* ── Stat cards ────────────────────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:0;}
+.stat-card{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:16px;
+  position:relative;
+  overflow:hidden;
+  transition:all .2s;
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--grad);opacity:.6;
+}
+.stat-card:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.3);}
+.stat-label{
+  font-size:10px;color:var(--muted);
+  margin-bottom:8px;
+  text-transform:uppercase;letter-spacing:.8px;font-weight:600;
+}
+.stat-value{font-size:24px;font-weight:800;color:var(--text);line-height:1.1;}
+.stat-value.ok{color:var(--ok);}
+.stat-value.accent{color:var(--accent);}
+.stat-value.accent2{color:var(--accent2);}
+.stat-value.small{font-size:14px;font-weight:600;line-height:1.4;}
+
+/* ── Progress bar ──────────────────────────────────────────────────────── */
+.progress-bar{height:3px;background:var(--surface3);border-radius:2px;margin-top:8px;overflow:hidden;}
+.progress-bar>div{height:100%;background:var(--grad);border-radius:2px;transition:width .5s ease;}
+
+/* ── CPS info bar ──────────────────────────────────────────────────────── */
+.cps-info-bar{
+  display:flex;flex-wrap:wrap;gap:16px;align-items:center;
+  padding:12px 16px;
+  background:linear-gradient(135deg,rgba(124,93,244,.06),rgba(34,211,238,.04));
+  border:1px solid rgba(124,93,244,.2);
+  border-radius:var(--radius-sm);
+  font-size:12px;margin-top:14px;
+}
+.cps-info-bar code{color:var(--accent2);font-family:'Courier New',monospace;font-size:11px;}
+.cps-info-bar span{color:var(--muted);}
+.cps-info-bar strong{color:var(--text);}
+
+/* ── Alerts ────────────────────────────────────────────────────────────── */
+.alerts-block{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+.alert{
+  padding:10px 14px;border-radius:var(--radius-sm);
+  font-size:13px;line-height:1.4;display:flex;align-items:center;gap:8px;
+}
+.alert-error{background:rgba(244,63,94,.1);border-left:3px solid var(--danger);color:var(--danger);}
+.alert-warn{background:rgba(251,146,60,.1);border-left:3px solid var(--warn);color:var(--warn);}
+
+/* ── Forms ─────────────────────────────────────────────────────────────── */
+.form-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+.form-group{flex:1;min-width:160px;}
+.form-group.full{flex:0 0 100%;}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600;letter-spacing:.3px;}
+input,select,textarea{
+  width:100%;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:var(--radius-sm);
+  padding:9px 12px;
+  font-size:13px;outline:none;
+  transition:all .2s;
+  font-family:inherit;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(124,93,244,.12);
+}
+textarea{resize:vertical;min-height:80px;font-family:'Courier New',monospace;font-size:12px;}
+input[type=range]{padding:4px 0;cursor:pointer;accent-color:var(--accent);}
+.range-val{font-weight:700;color:var(--accent2);min-width:32px;display:inline-block;text-align:right;}
+
+/* ── Toggles ───────────────────────────────────────────────────────────── */
+.toggle-label{font-size:12px;color:var(--muted);}
+.toggle-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+.toggle{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;}
+.toggle input{display:none;}
+.toggle-track{
+  width:36px;height:20px;
+  background:var(--surface3);
+  border:1px solid var(--border2);
+  border-radius:10px;position:relative;
+  transition:all .25s;flex-shrink:0;
+}
+.toggle-track::after{
+  content:'';position:absolute;left:3px;top:3px;
+  width:12px;height:12px;
+  background:var(--muted);border-radius:50%;
+  transition:all .25s;
+}
+.toggle input:checked+.toggle-track{background:var(--accent);border-color:var(--accent);}
+.toggle input:checked+.toggle-track::after{left:19px;background:#fff;}
+.toggle input:checked~.toggle-label{color:var(--text);}
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 18px;border-radius:var(--radius-sm);
+  border:none;cursor:pointer;
+  font-size:13px;font-weight:600;
+  transition:all .2s;letter-spacing:.2px;
+}
+.btn-primary{
+  background:var(--grad);
+  color:#fff;
+  box-shadow:0 4px 14px rgba(124,93,244,.35);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(124,93,244,.5);}
+.btn-success{
+  background:linear-gradient(135deg,#4ade80,#22d3ee);
+  color:#000;font-weight:700;
+  box-shadow:0 4px 12px rgba(74,222,128,.3);
+}
+.btn-success:hover{transform:translateY(-1px);filter:brightness(1.05);}
+.btn-danger{
+  background:linear-gradient(135deg,#f43f5e,#fb923c);
+  color:#fff;
+  box-shadow:0 4px 12px rgba(244,63,94,.3);
+}
+.btn-danger:hover{transform:translateY(-1px);}
+.btn-ghost{
+  background:transparent;
+  color:var(--muted);
+  border:1px solid var(--border2);
+}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:rgba(124,93,244,.06);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
+/* ── Code blocks ───────────────────────────────────────────────────────── */
+.code-block{
+  background:#050810;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:16px;
+  font-family:'Courier New',monospace;font-size:11.5px;
+  white-space:pre;overflow-x:auto;color:#94d1ff;position:relative;
+  line-height:1.7;
+}
+.copy-btn{
+  position:absolute;top:8px;right:8px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--muted);border-radius:6px;
+  padding:4px 10px;font-size:11px;cursor:pointer;
+  transition:all .15s;
+}
+.copy-btn:hover{color:var(--accent);border-color:var(--accent);}
+
+/* ── Param grid ────────────────────────────────────────────────────────── */
+.param-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
+.param-item{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:10px 14px;
+}
+.param-key{font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+.param-val{font-family:'Courier New',monospace;font-size:12px;color:var(--accent2);word-break:break-all;}
+
+/* ── Peers table ───────────────────────────────────────────────────────── */
+.peers-table{width:100%;border-collapse:separate;border-spacing:0;}
+.peers-table th{
+  text-align:left;padding:10px 12px;
+  font-size:10px;color:var(--muted);
+  border-bottom:1px solid var(--border);
+  font-weight:700;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;
+}
+.peers-table td{
+  padding:12px 12px;
+  border-bottom:1px solid var(--border);
+  font-size:13px;vertical-align:middle;
+  transition:background .15s;
+}
+.peers-table tr:last-child td{border-bottom:none;}
+.peers-table tbody tr:hover td{background:rgba(124,93,244,.05);}
+
+/* ── Status dot ────────────────────────────────────────────────────────── */
+.peer-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot.active{
+  background:var(--ok);
+  box-shadow:0 0 0 3px rgba(74,222,128,.2);
+  animation:pulse-ok 2s infinite;
+}
+.dot.inactive{background:var(--surface3);border:1px solid var(--border2);}
+@keyframes pulse-ok{0%,100%{box-shadow:0 0 0 3px rgba(74,222,128,.2);}50%{box-shadow:0 0 0 5px rgba(74,222,128,.05);}}
+
+/* ── Peer suspended ────────────────────────────────────────────────────── */
+tr.peer-suspended td{color:var(--muted);}
+tr.peer-suspended{opacity:.6;}
+.btn-suspend{opacity:.7;}
+.btn-suspend:hover{opacity:1;}
+.peer-flag{font-size:15px;margin-left:5px;}
+.peer-latency{font-size:11px;color:var(--muted);margin-left:3px;font-family:monospace;}
+.traffic{font-size:12px;}
+.traffic .rx{color:var(--accent2);font-weight:600;}
+.traffic .tx{color:var(--warn);font-weight:600;}
+
+/* ── Profile grid ──────────────────────────────────────────────────────── */
+.profile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;}
+.profile-btn{
+  padding:9px 10px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  cursor:pointer;text-align:center;font-size:12px;font-weight:500;
+  color:var(--muted);transition:all .2s;
+}
+.profile-btn:hover{border-color:rgba(124,93,244,.5);color:var(--text);background:rgba(124,93,244,.07);}
+.profile-btn.selected{
+  background:linear-gradient(135deg,rgba(124,93,244,.2),rgba(34,211,238,.1));
+  border-color:var(--accent);color:var(--accent);font-weight:700;
+}
+
+/* ── Divider ───────────────────────────────────────────────────────────── */
+.divider{border:none;border-top:1px solid var(--border);margin:18px 0;}
+
+/* ── Sections ──────────────────────────────────────────────────────────── */
+.section{display:none;}
+.section.active{display:block;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ── Modal ─────────────────────────────────────────────────────────────── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.6);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  z-index:1000;align-items:center;justify-content:center;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:var(--radius);
+  padding:28px;width:90%;max-width:620px;
+  max-height:90vh;overflow-y:auto;
+  position:relative;box-shadow:var(--shadow);
+  animation:modalIn .2s ease;
+}
+@keyframes modalIn{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-close{
+  position:absolute;top:14px;right:18px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--muted);font-size:16px;cursor:pointer;
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;line-height:1;
+}
+.modal-close:hover{background:var(--danger);border-color:var(--danger);color:#fff;}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:18px;color:var(--text);}
+.qr-container{text-align:center;padding:16px;}
+.qr-container img{max-width:260px;border-radius:12px;border:4px solid rgba(255,255,255,.9);box-shadow:0 8px 32px rgba(0,0,0,.4);}
+
+/* ── Toast ─────────────────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:28px;right:28px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast-msg{
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  color:var(--text);
+  padding:11px 18px;
+  border-radius:var(--radius-sm);
+  font-size:13px;font-weight:500;
+  animation:slideIn .25s cubic-bezier(.34,1.56,.64,1);
+  max-width:320px;
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(10px);
+}
+.toast-msg.ok{border-color:var(--ok);background:rgba(74,222,128,.08);}
+.toast-msg.err{border-color:var(--danger);background:rgba(244,63,94,.08);}
+@keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:none;opacity:1}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="logo">
+      <h2>AWG 3.1</h2><span>Web UI</span>
+    </div>
+    <div class="nav-item active" data-section="dashboard"><span class="icon">📊</span> <span class="i18n" data-key="nav_dashboard">Dashboard</span></div>
+    <div class="nav-item" data-section="peers"><span class="icon">👥</span> <span class="i18n" data-key="nav_peers">Peers</span></div>
+    <div class="nav-item" data-section="add-peer"><span class="icon">➕</span> <span class="i18n" data-key="nav_add_peer">Add Peer</span></div>
+    <div class="nav-item" data-section="server"><span class="icon">⚙️</span> <span class="i18n" data-key="nav_server">Server Setup</span></div>
+    <div class="nav-item" data-section="generator"><span class="icon">🔮</span> <span data-i18n="nav_cps">CPS Generator</span></div>
+    <div class="nav-item" data-section="rawconf"><span class="icon">📄</span> <span class="i18n" data-key="nav_rawconf">Raw Config</span></div>
+    <div class="nav-item" data-section="settings"><span class="icon">🔑</span> <span class="i18n" data-key="nav_settings">Settings</span></div>
+    <div style="flex:1"></div>
+    <div style="padding:8px 16px;display:flex;gap:8px;border-top:1px solid var(--border-color);margin-top:8px">
+      <button onclick="toggleTheme()" style="background:var(--bg-card);border:1px solid var(--border-color);color:var(--text-muted);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;flex:1" id="theme-btn">☀️</button>
+      <button onclick="toggleLang()" style="background:var(--bg-card);border:1px solid var(--border-color);color:var(--text-muted);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:11px;font-weight:700;flex:1;font-family:var(--font)" id="lang-btn">EN</button>
+    </div>
+    <a href="/logout" class="nav-item" style="text-decoration:none;color:var(--text-muted);margin-bottom:8px"><span class="icon">🚪</span> <span class="i18n" data-key="nav_logout">Выйти</span></a>
+  </nav>
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div id="s-dashboard" class="section active">
+
+      <!-- Hero status banner -->
+      <div id="conn-status-banner" style="
+        display:flex;align-items:center;gap:16px;
+        padding:20px 24px;border-radius:var(--radius);
+        background:linear-gradient(135deg,rgba(124,93,244,.1),rgba(34,211,238,.06));
+        border:1px solid rgba(124,93,244,.25);
+        margin-bottom:20px;position:relative;overflow:hidden;
+      ">
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 90% 50%,rgba(34,211,238,.05),transparent);pointer-events:none"></div>
+        <div id="conn-status-dot" style="width:14px;height:14px;border-radius:50%;background:var(--warn);flex-shrink:0;box-shadow:0 0 0 4px rgba(251,146,60,.2)"></div>
+        <div style="flex:1">
+          <div id="conn-status-label" style="font-weight:700;font-size:15px;color:var(--text)">…</div>
+          <div id="conn-status-ip" style="font-size:12px;color:var(--muted);margin-top:3px;font-family:monospace"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="awg-status-badge" class="badge warn">…</span>
+          <button class="btn btn-ghost btn-sm" onclick="loadStatus()">↺</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 <span data-i18n="dash_title">Server Status</span></div>
+        <div class="stats-grid" id="stats-grid"></div>
+        <div id="alerts-container" class="alerts-block"></div>
+        <div class="cps-info-bar" id="cps-info-bar" style="display:none">
+          <span>Profile: <strong id="s-cps-profile">—</strong></span>
+          <span>H1: <code id="s-h1">—</code></span>
+          <span>Jc: <code id="s-jc">—</code></span>
+          <span>Jmin/Jmax: <code id="s-jmin">—</code> / <code id="s-jmax">—</code></span>
+          <button class="btn btn-ghost btn-sm" id="btn-regen-cps" onclick="regenCps()" style="margin-left:auto">↻ Regen CPS</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 <span data-i18n="logs_title">System Logs</span>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="loadSystemLogs()" data-i18n="btn_refresh">↺ Refresh</button>
+        </div>
+        <div id="system-logs-list" style="display:flex;flex-direction:column;gap:6px">
+          <span style="color:var(--muted);font-size:13px" data-i18n="logs_loading">Loading…</span>
+        </div>
+      </div>
+      <!-- Log viewer modal -->
+      <div id="log-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.6);align-items:center;justify-content:center">
+        <div style="background:var(--surface);border-radius:12px;width:min(860px,95vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+          <div style="display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)">
+            <span id="log-modal-title" style="font-weight:600;font-size:15px"></span>
+            <button onclick="closeLogModal()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">×</button>
+          </div>
+          <pre id="log-modal-content" style="margin:0;padding:16px 20px;overflow:auto;font-size:11px;line-height:1.5;color:var(--text);background:var(--surface2);flex:1;white-space:pre-wrap;word-break:break-all"></pre>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🚀 <span data-i18n="dash_quickstart">Quick Start</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+          <div style="padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .2s" onclick="navigate('server')" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="font-size:24px;margin-bottom:8px">⚙️</div>
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;color:var(--text)">Server Setup</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.5" data-i18n="qs_server">Initialize AWG with CPS obfuscation parameters</div>
+          </div>
+          <div style="padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .2s" onclick="navigate('add-peer')" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="font-size:24px;margin-bottom:8px">➕</div>
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;color:var(--text)">Add Peer</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.5" data-i18n="qs_peer">Create a client with unique obfuscation profile</div>
+          </div>
+          <div style="padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .2s" onclick="navigate('peers')" onmouseover="this.style.borderColor='var(--ok)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="font-size:24px;margin-bottom:8px">📱</div>
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;color:var(--text)">Connect</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.5" data-i18n="qs_connect">Download .conf or scan QR in AmneziaWG app</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SERVER SETUP -->
+    <div id="s-server" class="section">
+      <div class="card">
+        <div class="card-title">⚙️ <span data-i18n="server_title">Server Configuration</span></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="label_version">AWG Version</label>
+            <select id="sv-version">
+              <option value="3.1" selected data-i18n="opt_awg31">AWG 3.1 (recommended)</option>
+              <option value="2.0" data-i18n="opt_awg20">AWG 2.0</option>
+              <option value="1.5">AWG 1.5</option>
+              <option value="1.0">AWG 1.0</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_intensity">Intensity</label>
+            <select id="sv-intensity">
+              <option value="low" data-i18n="opt_low">Low</option>
+              <option value="medium" selected data-i18n="opt_medium">Medium</option>
+              <option value="high" data-i18n="opt_high">High</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_profile">Mimic Profile</label>
+            <select id="sv-profile">
+              <option value="quic_initial">QUIC Initial</option>
+              <option value="quic_0rtt">QUIC 0-RTT</option>
+              <option value="tls_client_hello">TLS 1.3</option>
+              <option value="wireguard_noise">Noise_IK</option>
+              <option value="dtls">DTLS 1.3</option>
+              <option value="http3">HTTP/3</option>
+              <option value="sip">SIP</option>
+              <option value="tls_to_quic">TLS → QUIC</option>
+              <option value="quic_burst">QUIC Burst</option>
+              <option value="dns_query">DNS Query</option>
+              <option value="random" data-i18n="opt_random">Random</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="label_address">Server Address (CIDR)</label>
+            <input id="sv-address" value="10.8.0.1/24">
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_port">Listen Port</label>
+            <input id="sv-port" type="number" value="51820">
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_browser">Browser Profile (BFP)</label>
+            <select id="sv-browser">
+              <option value="chrome" selected>Chrome</option>
+              <option value="edge">Edge</option>
+              <option value="firefox">Firefox</option>
+              <option value="safari">Safari</option>
+              <option value="yandex_desktop">Yandex Desktop</option>
+              <option value="yandex_mobile">Yandex Mobile</option>
+              <option value="" data-i18n="opt_none">None</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><span data-i18n="label_jc">Junk Count (Jc):</span> <span id="sv-jc-val" class="range-val">4</span></label>
+            <input type="range" id="sv-jc" min="0" max="15" value="4"
+              oninput="document.getElementById('sv-jc-val').textContent=this.value">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label data-i18n="label_endpoint">Server Endpoint
+              <span class="help-tip" data-tooltip="IP or hostname that clients will connect to. Leave empty to use auto-detected public IP." data-i18n-tooltip="tip_endpoint">?</span>
+            </label>
+            <input id="sv-endpoint" type="text" data-i18n-ph="ph_endpoint" placeholder="Leave empty to auto-detect public IP (e.g. 1.2.3.4:51820 or vpn.example.com)">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">
+              <span data-i18n="label_endpoint_hint">Current:</span>
+              <span id="sv-endpoint-current" style="font-family:monospace;color:var(--accent)">…</span>
+            </div>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <label class="toggle"><input type="checkbox" id="sv-router-mode"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_router_mode">Router Mode</span></label>
+          <label class="toggle"><input type="checkbox" id="sv-extreme-max"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_extreme_max">Extreme Max</span></label>
+          <label class="toggle"><input type="checkbox" id="sv-regen-keys"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_regen_keys">Regenerate Keys</span></label>
+          <label class="toggle"><input type="checkbox" id="sv-auto-start" checked><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_auto_start">Auto-start server</span></label>
+        </div>
+        <div class="btn-group"><button class="btn btn-primary" onclick="initServer()" data-i18n="btn_init">⚡ Initialize + Apply</button></div>
+        <div id="sv-result" style="display:none;margin-top:16px">
+          <hr class="divider">
+          <div class="card-title" style="font-size:14px" data-i18n="sv_pubkey_title">Server Public Key</div>
+          <div class="code-block" id="sv-pubkey-block"><button class="copy-btn" onclick="copyCode('sv-pubkey-block')">Copy</button></div>
+          <hr class="divider">
+          <div class="card-title" style="font-size:14px" data-i18n="sv_params_title">Generated AWG Parameters</div>
+          <div class="param-grid" id="sv-params-grid"></div>
+        </div>
+      </div>
+
+    <div class="card">
+      <div class="card-title">🛡️ <span data-i18n="awg31_title">AmneziaWG 3.1 Extras</span></div>
+      <div class="toggle-row">
+        <label class="toggle"><input type="checkbox" id="awg31-enabled" onchange="toggleAwg31Fields()"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_awg31_enabled">Enable AWG 3.1</span></label>
+      </div>
+      <div id="awg31-fields" style="display:none">
+        <div class="form-row">
+          <div class="form-group full">
+            <label data-i18n="label_awg31_hpk">Header Protection Key
+              <span class="help-tip" data-tooltip="Symmetric key shared by server and every peer to encrypt/decrypt packet headers. Regenerating breaks all existing peer configs until re-issued." data-i18n-tooltip="tip_awg31_hpk">?</span>
+            </label>
+            <div class="code-block" id="awg31-hpk-block"><button class="copy-btn" onclick="copyCode('awg31-hpk-block')">Copy</button><span id="awg31-hpk-text">—</span></div>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <label class="toggle"><input type="checkbox" id="awg31-random-trailers" onchange="document.getElementById('awg31-rt-warning').style.display=this.checked?'block':'none'"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_awg31_random_trailers">Random Trailers</span></label>
+          <label class="toggle"><input type="checkbox" id="awg31-disable-cookies"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_awg31_disable_cookies">Disable Cookies</span></label>
+          <label class="toggle"><input type="checkbox" id="awg31-regen-hpk"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_awg31_regen_hpk">Regenerate Key</span></label>
+        </div>
+        <div id="awg31-rt-warning" class="alert alert-warn" style="display:none" data-i18n="warn_awg31_random_trailers">⚠ Known upstream bug (amneziawg-go issue #186): Random Trailers combined with wide H1-H3 ranges can silently drop transport packets. Keep H1-H3 ranges narrow if you enable this.</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="label_awg31_padding">Content Padding Addition
+              <span class="help-tip" data-tooltip="Bytes. &quot;N&quot; or &quot;min-max&quot;. Leave empty to disable." data-i18n-tooltip="tip_awg31_padding">?</span>
+            </label>
+            <input id="awg31-padding" type="text" placeholder="e.g. 0-128">
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_awg31_rekey_after">Rekey After Time
+              <span class="help-tip" data-tooltip="Seconds. &quot;N&quot; or &quot;min-max&quot;. Daemon default: 120." data-i18n-tooltip="tip_awg31_rekey_after">?</span>
+            </label>
+            <input id="awg31-rekey-after" type="text" placeholder="120">
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_awg31_rekey_timeout">Rekey Timeout
+              <span class="help-tip" data-tooltip="Seconds. &quot;N&quot; or &quot;min-max&quot;. Daemon default: 5." data-i18n-tooltip="tip_awg31_rekey_timeout">?</span>
+            </label>
+            <input id="awg31-rekey-timeout" type="text" placeholder="5">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="label_awg31_reject_after">Reject After Time
+              <span class="help-tip" data-tooltip="Seconds. &quot;N&quot; or &quot;min-max&quot;. Daemon default: 180." data-i18n-tooltip="tip_awg31_reject_after">?</span>
+            </label>
+            <input id="awg31-reject-after" type="text" placeholder="180">
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_awg31_keepalive">Keepalive Timeout
+              <span class="help-tip" data-tooltip="Seconds. &quot;N&quot; or &quot;min-max&quot;. Daemon default: 10." data-i18n-tooltip="tip_awg31_keepalive">?</span>
+            </label>
+            <input id="awg31-keepalive" type="text" placeholder="10">
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_awg31_max_handshake">Max Handshake Attempts
+              <span class="help-tip" data-tooltip="&quot;N&quot; or &quot;min-max&quot;. Daemon default: 18. &quot;0&quot; is treated as unset (falls back to 18), not &quot;0 attempts&quot;." data-i18n-tooltip="tip_awg31_max_handshake">?</span>
+            </label>
+            <input id="awg31-max-handshake" type="text" placeholder="18">
+          </div>
+        </div>
+      </div>
+      <div class="btn-group"><button class="btn btn-primary" onclick="saveAwg31()" data-i18n="btn_save_awg31">💾 Save AWG 3.1 Settings</button></div>
+      <div id="awg31-status" style="font-size:11px;color:var(--muted);margin-top:8px"></div>
+    </div>
+    </div>
+
+    <!-- CPS GENERATOR -->
+    <div id="s-generator" class="section">
+      <div class="card">
+        <div class="card-title">🔮 <span data-i18n="gen_title">CPS Parameter Generator</span> <span class="badge">AWG 2.0/3.1</span></div>
+
+        <!-- What is CPS -->
+        <div style="background:var(--surface2);border-radius:8px;padding:14px 16px;margin-bottom:18px;border-left:3px solid var(--accent);font-size:13px;line-height:1.6;color:var(--muted)">
+          <b style="color:var(--text)" data-i18n="gen_what_title">What is CPS?</b><br>
+          <span data-i18n-html="gen_what_body">CPS (Custom Protocol Signature) — a set of obfuscation parameters for AWG 2.0. They make VPN traffic look like QUIC, DNS, SIP and other UDP protocols, bypassing DPI filtering.<br><b style="color:var(--text)">How to use:</b> choose a profile → click Generate → copy parameters to the server config or Add Peer.</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>
+              <span data-i18n="label_version">AWG Version</span>
+              <span class="help-tip" data-i18n-tooltip="tip_version" data-tooltip="">?</span>
+            </label>
+            <select id="g-version">
+              <option value="3.1" selected data-i18n="opt_awg31">AWG 3.1 (recommended)</option>
+              <option value="2.0" data-i18n="opt_awg20">AWG 2.0</option>
+              <option value="1.5">AWG 1.5</option>
+              <option value="1.0">AWG 1.0</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>
+              <span data-i18n="label_intensity">Intensity</span>
+              <span class="help-tip" data-i18n-tooltip="tip_intensity" data-tooltip="">?</span>
+            </label>
+            <select id="g-intensity">
+              <option value="low" data-i18n="opt_low">Low — light</option>
+              <option value="medium" selected data-i18n="opt_medium">Medium — balanced</option>
+              <option value="high" data-i18n="opt_high">High — maximum</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>
+              <span data-i18n="label_bfp">Browser Fingerprint</span>
+              <span class="help-tip" data-i18n-tooltip="tip_bfp" data-tooltip="">?</span>
+            </label>
+            <select id="g-browser">
+              <option value="chrome" selected>Chrome</option>
+              <option value="edge">Edge</option>
+              <option value="firefox">Firefox</option>
+              <option value="safari">Safari</option>
+              <option value="yandex_desktop">Yandex Desktop</option>
+              <option value="yandex_mobile">Yandex Mobile</option>
+              <option value="" data-i18n="opt_disabled">Disabled</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group full">
+            <label>
+              <span data-i18n="label_mimic_profile">Mimic Profile</span>
+              <span class="help-tip" data-i18n-tooltip="tip_mimic_profile" data-tooltip="">?</span>
+            </label>
+            <div class="profile-grid" id="profile-grid"></div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>
+              <span data-i18n="label_mtu">MTU:</span> <span id="g-mtu-val" class="range-val">1280</span>
+              <span class="help-tip" data-i18n-tooltip="tip_mtu" data-tooltip="">?</span>
+            </label>
+            <input type="range" id="g-mtu" min="576" max="1500" value="1280"
+              oninput="document.getElementById('g-mtu-val').textContent=this.value">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:2px"><span>576</span><span>1500</span></div>
+          </div>
+          <div class="form-group">
+            <label>
+              <span data-i18n="label_jc_count">Junk Count (Jc):</span> <span id="g-jc-val" class="range-val">4</span>
+              <span class="help-tip" data-i18n-tooltip="tip_jc" data-tooltip="">?</span>
+            </label>
+            <input type="range" id="g-jc" min="0" max="15" value="4"
+              oninput="document.getElementById('g-jc-val').textContent=this.value">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:2px"><span>0</span><span>15</span></div>
+          </div>
+          <div class="form-group">
+            <label>
+              <span data-i18n="label_custom_host">Custom Host (optional)</span>
+              <span class="help-tip" data-i18n-tooltip="tip_custom_host" data-tooltip="">?</span>
+            </label>
+            <input id="g-host" data-i18n-ph="ph_custom_host" placeholder="e.g.: yandex.net">
+          </div>
+        </div>
+
+        <!-- CPS Tags -->
+        <div style="margin-bottom:12px">
+          <label style="display:block;margin-bottom:6px;font-size:12px;color:var(--muted)">
+            <span data-i18n="label_cps_tags">CPS Tags — I1-packet components</span>
+            <span class="help-tip" data-i18n-tooltip="tip_cps_tags" data-tooltip="">?</span>
+          </label>
+          <div class="toggle-row">
+            <!-- <c> tag: скрыт — не поддерживается клиентами AWG (TODO: включить когда добавят поддержку) -->
+            <label class="toggle" style="display:none">
+              <input type="checkbox" id="g-tag-c"><span class="toggle-track"></span>
+              <span class="toggle-label" data-tooltip="" data-i18n-tooltip="tip_tag_c">&lt;c&gt; checksum</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="g-tag-t" checked><span class="toggle-track"></span>
+              <span class="toggle-label" data-tooltip="" data-i18n-tooltip="tip_tag_t">&lt;t&gt; timestamp</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="g-tag-r" checked><span class="toggle-track"></span>
+              <span class="toggle-label" data-tooltip="" data-i18n-tooltip="tip_tag_r">&lt;r N&gt; random pad</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="g-tag-rc" checked><span class="toggle-track"></span>
+              <span class="toggle-label" data-tooltip="" data-i18n-tooltip="tip_tag_rc">&lt;rc N&gt; SNI chars</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="g-tag-rd"><span class="toggle-track"></span>
+              <span class="toggle-label" data-tooltip="" data-i18n-tooltip="tip_tag_rd">&lt;rd N&gt; digits</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="toggle-row" style="margin-bottom:16px">
+          <label class="toggle">
+            <input type="checkbox" id="g-bfp" checked><span class="toggle-track"></span>
+            <span class="toggle-label" data-i18n="toggle_bfp" data-tooltip="" data-i18n-tooltip="tip_browser_fp_toggle">Browser FP</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="g-router-mode"><span class="toggle-track"></span>
+            <span class="toggle-label" data-i18n="toggle_router_mode" data-tooltip="" data-i18n-tooltip="tip_router_mode">Router Mode</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="g-extreme-max"><span class="toggle-track"></span>
+            <span class="toggle-label" data-i18n="toggle_extreme_max" data-tooltip="" data-i18n-tooltip="tip_extreme_max">Extreme Max</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="g-mimic-all"><span class="toggle-track"></span>
+            <span class="toggle-label" data-i18n="toggle_mimic_all" data-tooltip="" data-i18n-tooltip="tip_mimic_all">Mimic All (I1-I5)</span>
+          </label>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="generate()" data-i18n="btn_generate">🎲 Generate</button>
+          <button class="btn btn-ghost" onclick="copyGenResult()" data-i18n="btn_copy_snippet">📋 Copy Snippet</button>
+        </div>
+
+        <div id="gen-result" style="display:none;margin-top:20px">
+          <hr class="divider">
+          <div class="card-title" style="font-size:14px" data-i18n="gen_params_title">Generated Parameters</div>
+          <div class="param-grid" id="gen-params-grid" style="margin-bottom:16px"></div>
+          <div class="card-title" style="font-size:14px" data-i18n="gen_snippet_title">AWG Config Snippet</div>
+          <div class="code-block" id="gen-conf-block" style="position:relative">
+            <button class="copy-btn" onclick="copyCode('gen-conf-block')">Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PEERS -->
+    <div id="s-peers" class="section">
+      <div class="card">
+        <div class="card-title">👥 <span data-i18n="nav_peers">Peers</span>
+          <span id="peers-count" class="badge" style="margin-left:4px">0</span>
+          <label class="toggle" style="margin-left:12px">
+            <input type="checkbox" id="traffic-toggle" checked onchange="toggleTrafficCol()">
+            <span class="toggle-track"></span>
+            <span class="toggle-label" style="font-size:11px" data-i18n="traffic_stats_toggle">Traffic Stats</span>
+          </label>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="loadPeers()" data-i18n="btn_refresh">↺ Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="navigate('add-peer')" data-i18n="btn_add_peer">+ Add</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="peers-table">
+            <thead><tr>
+              <th></th>
+              <th data-i18n="th_status">Status</th>
+              <th data-i18n="th_name">Name</th>
+              <th data-i18n="th_ip">IP</th>
+              <th data-i18n="th_handshake">Last Handshake</th>
+              <th class="col-traffic" data-i18n="th_traffic">↓RX / ↑TX</th>
+              <th data-i18n="th_actions">Actions</th>
+            </tr></thead>
+            <tbody id="peers-tbody">
+              <tr><td colspan="7" style="color:var(--text-muted);text-align:center;padding:24px" data-i18n="loading">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD PEER -->
+    <div id="s-add-peer" class="section">
+      <div class="card">
+        <div class="card-title">➕ <span data-i18n="add_peer_title">Add New Peer</span></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="label_peer_name">Peer Name</label>
+            <input id="p-name" data-i18n-ph="ph_peer_name" placeholder="e.g. iPhone, Laptop">
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_allowed_ips">Allowed IPs (leave blank for auto)</label>
+            <input id="p-ips" data-i18n-ph="ph_allowed_ips" placeholder="auto (next free /32)">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="label_version">AWG Version</label>
+            <select id="p-version">
+              <option value="3.1" selected>AWG 3.1</option>
+              <option value="2.0">AWG 2.0</option>
+              <option value="1.5">AWG 1.5</option>
+              <option value="1.0">AWG 1.0</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_intensity">Intensity</label>
+            <select id="p-intensity">
+              <option value="low" data-i18n="opt_low">Low</option>
+              <option value="medium" selected data-i18n="opt_medium">Medium</option>
+              <option value="high" data-i18n="opt_high">High</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label data-i18n="label_profile">Mimic Profile</label>
+            <select id="p-profile">
+              <option value="quic_initial">QUIC Initial</option>
+              <option value="quic_0rtt">QUIC 0-RTT</option>
+              <option value="tls_client_hello">TLS 1.3</option>
+              <option value="wireguard_noise">Noise_IK</option>
+              <option value="dtls">DTLS 1.3</option>
+              <option value="http3">HTTP/3</option>
+              <option value="sip">SIP</option>
+              <option value="tls_to_quic">TLS → QUIC</option>
+              <option value="quic_burst">QUIC Burst</option>
+              <option value="dns_query">DNS Query</option>
+              <option value="random" data-i18n="opt_random">Random</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="label_browser">Browser Profile (BFP)</label>
+            <select id="p-browser">
+              <option value="chrome" selected>Chrome</option>
+              <option value="edge">Edge</option>
+              <option value="firefox">Firefox</option>
+              <option value="safari">Safari</option>
+              <option value="yandex_desktop">Yandex Desktop</option>
+              <option value="yandex_mobile">Yandex Mobile</option>
+              <option value="" data-i18n="opt_none">None</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label><span data-i18n="label_jc">Junk Count (Jc):</span> <span id="p-jc-val" class="range-val">4</span></label>
+            <input type="range" id="p-jc" min="0" max="15" value="4"
+              oninput="document.getElementById('p-jc-val').textContent=this.value">
+          </div>
+        </div>
+        <div class="toggle-row">
+          <label class="toggle"><input type="checkbox" id="p-use-psk" checked><span class="toggle-track"></span><span class="toggle-label" data-i18n="label_psk">Pre-shared Key</span></label>
+          <label class="toggle"><input type="checkbox" id="p-router-mode"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_router_mode">Router Mode</span></label>
+          <label class="toggle"><input type="checkbox" id="p-extreme-max"><span class="toggle-track"></span><span class="toggle-label" data-i18n="toggle_extreme_max">Extreme Max</span></label>
+          <label class="toggle">
+            <input type="checkbox" id="p-use-expiry" onchange="toggleExpiry()"><span class="toggle-track"></span>
+            <span class="toggle-label" data-i18n="toggle_client_expiry">Client Expiry</span>
+          </label>
+        </div>
+        <div id="expiry-row" style="display:none" class="form-row">
+          <div class="form-group" style="max-width:200px">
+            <label>
+              <span data-i18n="label_expiry">Expiry Date</span>
+              <span class="help-tip" data-i18n-tooltip="tip_expiry" data-tooltip="">?</span>
+            </label>
+            <input type="date" id="p-expiry">
+          </div>
+        </div>
+
+        <!-- Advanced CPS Section -->
+        <details style="margin-bottom:16px">
+          <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--accent);padding:8px 0;user-select:none;list-style:none;display:flex;align-items:center;gap:6px">
+            <span id="cps-arrow" style="transition:transform .2s">▶</span> 🔮 <span data-i18n="adv_cps_title">Advanced CPS Parameters</span>
+            <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px" data-i18n="adv_cps_subtitle">(optional — Auto by default)</span>
+          </summary>
+          <div style="margin-top:12px;padding:14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px;padding:8px 10px;background:var(--bg);border-radius:6px;border-left:2px solid var(--accent)" data-i18n="adv_cps_hint">
+              CPS parameters are auto-generated when creating a peer. Customize here if needed.
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  <span data-i18n="label_custom_sni">Custom Host (SNI)</span>
+                  <span class="help-tip" data-i18n-tooltip="tip_custom_sni_peer" data-tooltip="">?</span>
+                </label>
+                <input id="p-host" data-i18n-ph="ph_custom_sni" placeholder="e.g.: yandex.net">
+              </div>
+              <div class="form-group">
+                <label>
+                  <span data-i18n="label_mtu_peer">MTU:</span> <span id="p-mtu-val" class="range-val">1280</span>
+                  <span class="help-tip" data-i18n-tooltip="tip_mtu_peer" data-tooltip="">?</span>
+                </label>
+                <input type="range" id="p-mtu" min="576" max="1500" value="1280"
+                  oninput="document.getElementById('p-mtu-val').textContent=this.value">
+              </div>
+            </div>
+
+            <div style="margin-bottom:10px">
+              <label style="display:block;margin-bottom:6px;font-size:12px;color:var(--muted)">
+                <span data-i18n="label_cps_tags_peer">CPS Tags (I1-packet)</span>
+                <span class="help-tip" data-i18n-tooltip="tip_cps_tags_peer" data-tooltip="">?</span>
+              </label>
+              <div class="toggle-row">
+                <!-- <c> tag: скрыт — не поддерживается клиентами AWG (TODO: включить когда добавят поддержку) -->
+                <label class="toggle" style="display:none">
+                  <input type="checkbox" id="p-tag-c"><span class="toggle-track"></span>
+                  <span class="toggle-label" data-tooltip="" data-i18n-tooltip="tip_tag_c">&lt;c&gt; checksum</span>
+                </label>
+                <label class="toggle">
+                  <input type="checkbox" id="p-tag-t" checked><span class="toggle-track"></span>
+                  <span class="toggle-label" data-tooltip="" data-i18n-tooltip="tip_tag_t">&lt;t&gt; timestamp</span>
+                </label>
+                <label class="toggle">
+                  <input type="checkbox" id="p-tag-r" checked><span class="toggle-track"></span>
+                  <span class="toggle-label" data-tooltip="" data-i18n-tooltip="tip_tag_r">&lt;r N&gt; random</span>
+                </label>
+                <label class="toggle">
+                  <input type="checkbox" id="p-tag-rc" checked><span class="toggle-track"></span>
+                  <span class="toggle-label" data-tooltip="" data-i18n-tooltip="tip_tag_rc">&lt;rc N&gt; SNI chars</span>
+                </label>
+                <label class="toggle">
+                  <input type="checkbox" id="p-tag-rd"><span class="toggle-track"></span>
+                  <span class="toggle-label" data-tooltip="" data-i18n-tooltip="tip_tag_rd">&lt;rd N&gt; digits</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="toggle-row">
+              <label class="toggle">
+                <input type="checkbox" id="p-bfp" checked><span class="toggle-track"></span>
+                <span class="toggle-label" data-i18n="toggle_browser_fp" data-tooltip="" data-i18n-tooltip="tip_browser_fp_toggle">Browser FP</span>
+              </label>
+              <label class="toggle">
+                <input type="checkbox" id="p-mimic-all"><span class="toggle-track"></span>
+                <span class="toggle-label" data-i18n="toggle_mimic_all_i15" data-tooltip="" data-i18n-tooltip="tip_mimic_all">Mimic All (I1-I5)</span>
+              </label>
+            </div>
+
+          </div>
+        </details>
+
+        <div class="btn-group"><button class="btn btn-success" onclick="addPeer()" data-i18n="btn_create_peer">✅ Create Peer</button></div>
+
+        <div id="peer-result" style="display:none;margin-top:20px">
+          <hr class="divider">
+          <div class="card-title" style="font-size:14px" data-i18n="peer_created_title">✅ Peer Created</div>
+          <div class="form-group full" style="margin-bottom:12px">
+            <label data-i18n="label_client_conf">Client Config (.conf)</label>
+            <div class="code-block" id="peer-conf-block" style="position:relative">
+              <button class="copy-btn" onclick="copyCode('peer-conf-block')">Copy</button>
+            </div>
+          </div>
+          <div class="btn-group" style="margin-bottom:8px">
+            <button class="btn btn-ghost" onclick="downloadConf()" data-i18n="btn_download_conf">⬇ Download .conf</button>
+            <button class="btn btn-ghost" onclick="showQRNew()" data-i18n="btn_qr_code">📱 QR Code</button>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:16px;padding:8px 12px;background:var(--surface2);border-radius:6px;border-left:3px solid var(--accent)" data-i18n-html="peer_hint">
+            📱 <b style="color:var(--text)">AmneziaWG</b> (Android/iOS) — scan QR &nbsp;·&nbsp;
+            <b style="color:var(--text)">Amnezia VPN</b> — ⬇ Download .conf → import file
+          </div>
+          <div id="qr-area-new" style="display:none">
+            <div class="qr-container" id="qr-container-new"></div>
+          </div>
+          <div class="card-title" style="font-size:14px;margin-top:12px" data-i18n="peer_awg_params">AWG Parameters</div>
+          <div class="param-grid" id="peer-params-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAW CONFIG -->
+    <div id="s-rawconf" class="section">
+      <div class="card">
+        <div class="card-title">📄 <span data-i18n="raw_title">Raw Config</span>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="loadRawConf()" data-i18n="btn_refresh">↺ Refresh</button>
+        </div>
+        <div class="code-block" id="raw-conf-block" style="position:relative">
+          <button class="copy-btn" onclick="copyCode('raw-conf-block')">Copy</button>
+          Loading…
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="s-settings" class="section">
+      <div class="card">
+        <div class="card-title">🔑 <span data-i18n="settings_title">Change login / password</span></div>
+        <div id="settings-msg" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:6px;font-size:13px"></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="settings_new_login">New username</label>
+            <input id="s-new-user" type="text" autocomplete="username" placeholder="admin">
+          </div>
