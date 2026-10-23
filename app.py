@@ -237,9 +237,9 @@ def _gen_keypair():
         )
     except Exception:
         try:
-            priv = subprocess.check_output([AWG_TOOL, "genkey"]).strip().decode()
+            priv = subprocess.check_output([AWG_TOOL, "genkey"], timeout=5).strip().decode()
             pub  = subprocess.check_output(
-                [AWG_TOOL, "pubkey"], input=priv.encode()
+                [AWG_TOOL, "pubkey"], input=priv.encode(), timeout=5
             ).strip().decode()
             return priv, pub
         except Exception:
@@ -1098,7 +1098,8 @@ def _awg_peer_stats() -> dict:
     real_handshakes = {}
     try:
         hs_out = subprocess.check_output(
-            [AWG_TOOL, "show", AWG_IF, "latest-handshakes"], stderr=subprocess.DEVNULL
+            [AWG_TOOL, "show", AWG_IF, "latest-handshakes"], stderr=subprocess.DEVNULL,
+            timeout=5
         ).decode()
         for hs_line in hs_out.splitlines():
             hs_parts = hs_line.split('\t')
@@ -1118,7 +1119,8 @@ def _awg_peer_stats() -> dict:
         try:
             import re as _re
             hr_out = subprocess.check_output(
-                [AWG_TOOL, "show", AWG_IF], stderr=subprocess.DEVNULL
+                [AWG_TOOL, "show", AWG_IF], stderr=subprocess.DEVNULL,
+                timeout=5
             ).decode()
             cur_peer = None
             for hr_line in hr_out.splitlines():
@@ -1142,7 +1144,8 @@ def _awg_peer_stats() -> dict:
 
     try:
         out = subprocess.check_output(
-            [AWG_TOOL, "show", AWG_IF, "dump"], stderr=subprocess.DEVNULL
+            [AWG_TOOL, "show", AWG_IF, "dump"], stderr=subprocess.DEVNULL,
+            timeout=5
         ).decode()
         for line in out.splitlines():
             parts = line.split('\t')
@@ -1224,7 +1227,8 @@ def _awg_peer_stats() -> dict:
 def _awg_status() -> dict:
     try:
         out = subprocess.check_output(
-            [AWG_TOOL, "show", AWG_IF], stderr=subprocess.DEVNULL
+            [AWG_TOOL, "show", AWG_IF], stderr=subprocess.DEVNULL,
+            timeout=5
         ).decode()
         return {"running": True, "output": out}
     except Exception:
@@ -2875,4 +2879,4 @@ if __name__ == "__main__":
     print(f"[AWG Web UI] Config: {AWG_CONF_PATH}")
     _setup_split_logging()
     _auto_start_awg()
-    app.run(host="0.0.0.0", port=WEB_PORT, debug=False)
+    app.run(host="0.0.0.0", port=WEB_PORT, debug=False, threaded=True)
