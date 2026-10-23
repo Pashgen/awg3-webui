@@ -6,7 +6,7 @@
 # =============================================================================
 
 # ── Stage 1: build amneziawg-go ──────────────────────────────────────────────
-FROM golang:1.25.5-alpine3.21 AS build-awg-go
+FROM golang:1.25.14-alpine3.24 AS build-awg-go
 
 RUN apk add --no-cache git
 
@@ -16,19 +16,33 @@ COPY patches/obf_counter.go      /patches/obf_counter.go
 COPY patches/obf_counter_test.go /patches/obf_counter_test.go
 
 WORKDIR /build
-# Pinned to v3.0.3 (cf9d2dd20282), NOT floating HEAD. This used to be an
-# unpinned `--depth=1` clone of master, meaning every rebuild silently picked
-# up whatever the upstream tip was that day. Two rebuilds tonight (image
-# rename, active-peer-detection fix) each pulled a newer, untested commit —
-# and the resulting binary drops almost all outbound relay packets under
-# load (confirmed on ac3 via raw NAT session counters: 622 packets in from a
-# real client, only 7 replies out — reproduced identically on both AWG 2.0
-# and 3.1 configs, and with obfuscation stripped down to Jc=0, ruling out
-# app-level config as the cause). v3.0.3 is the last tagged release before
-# the 3.1 protocol extension landed - closest known-good point to what was
-# actually running before tonight's redeploys.
+# Was pinned to v3.0.3 (cf9d2dd20282) after an unpinned floating-HEAD clone
+# caused a severe regression: the resulting binary dropped almost all
+# outbound relay packets under load (confirmed on ac3 via raw NAT session
+# counters: 622 packets in from a real client, only 7 replies out —
+# reproduced identically on both AWG 2.0 and 3.1 configs, and with
+# obfuscation stripped to Jc=0, ruling out app-level config as the cause).
+#
+# 2026-10-23: bumped to v3.1.20260828 (b5928efb6ca1), the latest tag, after
+# finding a specific related fix upstream — commit b5928ef "disable the
+# whole underload if DisableCookies is on" fixes a bug where, under load
+# with DisableCookies set, handshakes failing the MAC2 check were silently
+# dropped (goto skip) instead of either getting a cookie reply or falling
+# through to the rate limiter. Other fixes picked up in this range:
+# 08d68cd (keepalives were being ignored), 1b86b2a (panic from a wrong
+# trailerLen in HandshakeCookie, itself introduced by the 1f50ad7 "AWG 3.1
+# protocol" commit), da11c9f (wrong udp window for RandomPaddingAddition).
+#
+# IMPORTANT CAVEAT: b5928ef's fix is gated on DisableCookies, a flag that
+# only exists in AWG 3.1 — it does not obviously explain why the original
+# packet-drop regression above was also reproduced on plain AWG 2.0 configs.
+# This bump is NOT confirmed to fully fix that regression; build success
+# alone proves nothing about runtime behavior under load. Verify with the
+# same method used to diagnose the original issue (raw NAT session packet
+# counters on ac3 under real traffic) before trusting this in production.
+# If packet loss under load reappears, revert this pin to cf9d2dd20282.
 RUN git clone https://github.com/amnezia-vpn/amneziawg-go.git . && \
-    git checkout cf9d2dd20282 && \
+    git checkout b5928efb6ca1 && \
     # ── Apply <c> tag patch ───────────────────────────────────────────── \
     # 1) Copy counterObf implementation into device/ package
     cp /patches/obf_counter.go      device/obf_counter.go && \
@@ -50,7 +64,7 @@ RUN git clone https://github.com/amnezia-vpn/amneziawg-go.git . && \
     CGO_ENABLED=0 go build -v -o /usr/bin/amneziawg-go
 
 # ── Stage 2: build awg-tools (awg + awg-quick) ───────────────────────────────
-FROM alpine:3.19 AS build-awg-tools
+FROM alpine:3.24 AS build-awg-tools
 
 RUN apk add --no-cache git build-base bash linux-headers
 
@@ -64,7 +78,17 @@ RUN git clone --depth=1 \
     install -m 0755 wg-quick/linux.bash /usr/bin/awg-quick
 
 # ── Stage 3: runtime ─────────────────────────────────────────────────────────
-FROM alpine:3.19
+# Alpine 3.19 reached end-of-life 2025-11-01 and stopped receiving security
+# backports — its nginx package has been frozen at 1.24.0-r16 (built
+# 2024-04-26) ever since, silently missing 17+ nginx CVEs disclosed through
+# 2026, including two Critical/KEV heap overflows with public exploits
+# (CVE-2026-9256, CVE-2026-42945 "Rift") and the Oct 2026 batch
+# (CVE-2026-15176/93479/97205/95101/97629). Alpine 3.24 (supported until
+# 2028-06-01) carries nginx 1.30.6-r0 (built 2026-10-22), which fixes all of
+# the above. Do not pin the nginx package version explicitly — staying on
+# apk's unpinned `nginx` within a *supported* branch is what keeps future
+# security patches flowing automatically on rebuild.
+FROM alpine:3.24
 
 RUN apk add --no-cache \
     iproute2 iptables iptables-legacy bash curl \
